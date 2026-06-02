@@ -1,0 +1,173 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-border: rgba(226, 232, 240, 0.8);
+  --sidebar: rgba(241, 245, 249, 0.75);
+  --header: rgba(248, 250, 252, 0.8);
+  
+  /* Cyber Accents - adjusted for high readability in Light Mode */
+  --cyan-accent: #0ea5e9; 
+  --purple-accent: #8b5cf6; 
+  --emerald-accent: #10b981;
+  --text-muted: #64748b;
+  --glow-opacity: 0.1;
+  --glow-size: 8px;
+}
+
+.dark {
+  --background: #0b0f19; /* Deep Cyber Dark */
+  --foreground: #f8fafc;
+  --card: #1e293b; /* Cyber Card */
+  --card-border: rgba(30, 41, 59, 0.5);
+  --sidebar: rgba(15, 23, 42, 0.65);
+  --header: rgba(11, 15, 25, 0.7);
+  
+  /* Cyber Accents - neon glow values for Dark Mode */
+  --cyan-accent: #00f2fe; 
+  --purple-accent: #9d4edd; 
+  --emerald-accent: #10b981;
+  --text-muted: #94a3b8;
+  --glow-opacity: 0.45;
+  --glow-size: 15px;
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-border: var(--card-border);
+  --color-sidebar: var(--sidebar);
+  --color-header: var(--header);
+  
+  --color-cyan-accent: var(--cyan-accent);
+  --color-purple-accent: var(--purple-accent);
+  --color-emerald-accent: var(--emerald-accent);
+  --color-muted: var(--text-muted);
+  
+  --font-sans: var(--font-geist-sans), Inter, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(157, 78, 221, 0.15);
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(0, 242, 254, 0.15);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(157, 78, 221, 0.35);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 242, 254, 0.35);
+}
+
+/* Base Body Styles */
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+/* Custom Web Effects */
+.glassmorphism {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.cyber-mesh {
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(0, 242, 254, 0.04) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(157, 78, 221, 0.06) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.02) 0px, transparent 50%);
+}
+
+.dark .cyber-mesh {
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(0, 242, 254, 0.07) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(157, 78, 221, 0.09) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
+}
+
+.cyber-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+}
+
+.dark .cyber-grid {
+  background-image: 
+    linear-gradient(to right, rgba(30, 41, 59, 0.3) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(30, 41, 59, 0.3) 1px, transparent 1px);
+}
+
+/* Cyber Glow Borders */
+.cyber-glow-cyan {
+  box-shadow: 0 0 var(--glow-size) rgba(0, 242, 254, calc(var(--glow-opacity) * 0.4));
+  border-color: rgba(0, 242, 254, 0.3);
+}
+
+.cyber-glow-cyan-hover:hover {
+  box-shadow: 0 0 var(--glow-size) rgba(0, 242, 254, var(--glow-opacity));
+  border-color: rgba(0, 242, 254, 0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cyber-glow-purple {
+  box-shadow: 0 0 var(--glow-size) rgba(157, 78, 221, calc(var(--glow-opacity) * 0.4));
+  border-color: rgba(157, 78, 221, 0.3);
+}
+
+.cyber-glow-purple-hover:hover {
+  box-shadow: 0 0 var(--glow-size) rgba(157, 78, 221, var(--glow-opacity));
+  border-color: rgba(157, 78, 221, 0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cyber-glow-emerald {
+  box-shadow: 0 0 var(--glow-size) rgba(16, 185, 129, calc(var(--glow-opacity) * 0.3));
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.cyber-glow-emerald-hover:hover {
+  box-shadow: 0 0 var(--glow-size) rgba(16, 185, 129, var(--glow-opacity));
+  border-color: rgba(16, 185, 129, 0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neon-text-cyan {
+  text-shadow: 0 0 8px rgba(0, 242, 254, 0.5);
+}
+
+.neon-text-purple {
+  text-shadow: 0 0 8px rgba(157, 78, 221, 0.5);
+}
+
+/* Grid overlay animation */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s infinite ease-in-out;
+}
