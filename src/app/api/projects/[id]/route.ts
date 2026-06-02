@@ -6,9 +6,9 @@ import { withAuth, withRole, AuthenticatedRequest } from "@/lib/middleware";
  * GET /api/projects/[id]
  * Fetches a singular project details. Checks accessibility.
  */
-export const GET = withAuth(async (request: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export const GET = withAuth(async (request: AuthenticatedRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
-    const { id } = params;
+    const { id } = await params;
     const { userId, role } = request.user;
 
     const project = await prisma.project.findUnique({
@@ -52,9 +52,9 @@ export const GET = withAuth(async (request: AuthenticatedRequest, { params }: { 
  */
 export const PUT = withRole(
   ["ADMIN", "PROJECT_MANAGER"],
-  async (request: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+  async (request: AuthenticatedRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
-      const { id } = params;
+      const { id } = await params;
       const { name, description, deadline, status, memberEmails } = await request.json();
       const { userId, role } = request.user;
 
@@ -120,9 +120,9 @@ export const PUT = withRole(
  */
 export const DELETE = withRole(
   ["ADMIN", "PROJECT_MANAGER"],
-  async (request: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+  async (request: AuthenticatedRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
-      const { id } = params;
+      const { id } = await params;
       const { userId, role } = request.user;
 
       const project = await prisma.project.findUnique({

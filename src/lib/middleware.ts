@@ -5,17 +5,17 @@ export interface AuthenticatedRequest extends Request {
   user: TokenPayload;
 }
 
-export type RouteHandler = (
+export type RouteHandler<TParams = unknown> = (
   request: AuthenticatedRequest,
-  context: any
+  context: { params: Promise<TParams> }
 ) => Promise<Response> | Response;
 
 /**
  * Protect API routes by checking and verifying the JWT token.
  * Passes the verified user payload to the nested handler.
  */
-export function withAuth(handler: RouteHandler) {
-  return async (request: Request, context: any) => {
+export function withAuth<TParams = unknown>(handler: RouteHandler<TParams>) {
+  return async (request: Request, context: { params: Promise<TParams> }): Promise<Response> => {
     try {
       const authHeader = request.headers.get("authorization");
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -34,7 +34,6 @@ export function withAuth(handler: RouteHandler) {
         );
       }
 
-      // Attach decoded user payload to request
       const authRequest = request as AuthenticatedRequest;
       authRequest.user = decoded;
 
@@ -53,11 +52,11 @@ export function withAuth(handler: RouteHandler) {
  * Enforces Role-Based Access Control (RBAC) on the wrapped route handler.
  * Verifies that the user role matches one of the allowed role definitions.
  */
-export function withRole(
+export function withRole<TParams = unknown>(
   allowedRoles: ("ADMIN" | "PROJECT_MANAGER" | "TEAM_MEMBER")[],
-  handler: RouteHandler
+  handler: RouteHandler<TParams>
 ) {
-  return withAuth(async (request, context) => {
+  return withAuth(async (request: AuthenticatedRequest, context: { params: Promise<TParams> }) => {
     const userRole = request.user.role;
     if (!allowedRoles.includes(userRole)) {
       return NextResponse.json(

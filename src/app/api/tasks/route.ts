@@ -11,44 +11,52 @@ import { withAuth, withRole, AuthenticatedRequest } from "@/lib/middleware";
 export const GET = withAuth(async (request: AuthenticatedRequest) => {
   try {
     const { userId, role } = request.user;
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get("page") || "1");
+    const limit = parseInt(url.searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
 
-    let tasks;
-    if (role === "ADMIN") {
-      tasks = await prisma.task.findMany({
-        include: {
-          project: { select: { id: true, name: true } },
-          assignedTo: { select: { id: true, name: true, email: true, role: true, avatar: true } },
-          comments: { include: { author: { select: { name: true } } } },
-          attachments: true,
-        },
-        orderBy: { createdAt: "desc" },
-      });
-    } else {
-      tasks = await prisma.task.findMany({
-        where: {
-          OR: [
-            { assignedToId: userId },
-            {
-              project: {
-                OR: [
-                  { createdById: userId },
-                  { members: { some: { id: userId } } },
-                ],
-              },
+    let whereClause = {};
+    if (role !== "ADMIN") {
+      whereClause = {
+        OR: [
+          { assignedToId: userId },
+          {
+            project: {
+              OR: [
+                { createdById: userId },
+                { members: { some: { id: userId } } },
+              ],
             },
-          ],
-        },
-        include: {
-          project: { select: { id: true, name: true } },
-          assignedTo: { select: { id: true, name: true, email: true, role: true, avatar: true } },
-          comments: { include: { author: { select: { name: true } } } },
-          attachments: true,
-        },
-        orderBy: { createdAt: "desc" },
-      });
+          },
+        ],
+      };
     }
 
-    return NextResponse.json(tasks);
+    const [tasks, total] = await Promise.all([
+      prisma.task.findMany({
+        where: whereClause,
+        include: {
+          project: { select: { id: true, name: true } },
+          assignedTo: { select: { id: true, name: true, email: true, role: true, avatar: true } },
+          comments: { include: { author: { select: { name: true, avatar: true } } } },
+          attachments: true,
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.task.count({ where: whereClause })
+    ]);
+
+    return NextResponse.json({
+      data: tasks,
+      meta: {
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      }
+    });
   } catch (error) {
     console.error("GET Tasks Exception:", error);
     return NextResponse.json({ error: "Failed to query tasks" }, { status: 500 });
@@ -98,7 +106,7 @@ export const POST = withRole(
       });
       if (existingTask) {
         return NextResponse.json(
-          { error: "A task with this title already exists in the project" },
+          { error: "This task already exists in the project." },
           { status: 409 }
         );
       }
@@ -108,7 +116,7 @@ export const POST = withRole(
         const parsedDueDate = new Date(dueDate);
         if (parsedDueDate < new Date()) {
           return NextResponse.json(
-            { error: "Task deadline cannot be set in the past" },
+            { error: "Please select a valid deadline." },
             { status: 400 }
           );
         }

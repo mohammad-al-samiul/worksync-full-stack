@@ -13,19 +13,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoading } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
 
   const isAuthPage = pathname === "/auth";
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!isLoading && !user && !isAuthPage) {
       router.push("/auth");
     }
   }, [user, isLoading, isAuthPage, router]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   // Close mobile sidebar on route change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMobileOpen(false);
   }, [pathname]);
 

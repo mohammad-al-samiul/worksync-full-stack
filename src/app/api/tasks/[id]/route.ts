@@ -8,9 +8,9 @@ import { withAuth, AuthenticatedRequest } from "@/lib/middleware";
  * - ADMIN / PROJECT_MANAGER: Full access to update all fields.
  * - TEAM_MEMBER: Can ONLY update "status" field, and ONLY if the task is assigned to them.
  */
-export const PATCH = withAuth(async (request: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+export const PATCH = withAuth(async (request: AuthenticatedRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { userId, role } = request.user;
 
@@ -88,7 +88,7 @@ export const PATCH = withAuth(async (request: AuthenticatedRequest, { params }: 
         });
         if (existingTask) {
             return NextResponse.json(
-                { error: "A task with this title already exists in the project" },
+                { error: "This task already exists in the project." },
                 { status: 409 }
             );
         }
@@ -98,7 +98,7 @@ export const PATCH = withAuth(async (request: AuthenticatedRequest, { params }: 
         const parsedDueDate = new Date(body.dueDate);
         if (parsedDueDate < new Date() && parsedDueDate.toDateString() !== task.dueDate?.toDateString()) {
             return NextResponse.json(
-                { error: "Task deadline cannot be set in the past" },
+                { error: "Please select a valid deadline." },
                 { status: 400 }
             );
         }
@@ -109,7 +109,7 @@ export const PATCH = withAuth(async (request: AuthenticatedRequest, { params }: 
         // If they are trying to change assignee
         // We'll check if it actually changes the assignee ID, but for simplicity, any assignee update attempt on COMPLETED fails.
         return NextResponse.json(
-            { error: "Cannot reassign a completed task" },
+            { error: "Completed tasks cannot be reassigned." },
             { status: 400 }
         );
     }

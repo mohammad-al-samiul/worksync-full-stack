@@ -11,35 +11,44 @@ import { withAuth, withRole, AuthenticatedRequest } from "@/lib/middleware";
 export const GET = withAuth(async (request: AuthenticatedRequest) => {
   try {
     const { userId, role } = request.user;
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get("page") || "1");
+    const limit = parseInt(url.searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
 
-    let projects;
-    if (role === "ADMIN") {
-      projects = await prisma.project.findMany({
-        include: {
-          createdBy: { select: { id: true, name: true, email: true, role: true, avatar: true } },
-          members: { select: { id: true, name: true, email: true, role: true, avatar: true } },
-          tasks: true,
-        },
-        orderBy: { createdAt: "desc" },
-      });
-    } else {
-      projects = await prisma.project.findMany({
-        where: {
-          OR: [
-            { createdById: userId },
-            { members: { some: { id: userId } } },
-          ],
-        },
-        include: {
-          createdBy: { select: { id: true, name: true, email: true, role: true, avatar: true } },
-          members: { select: { id: true, name: true, email: true, role: true, avatar: true } },
-          tasks: true,
-        },
-        orderBy: { createdAt: "desc" },
-      });
+    let whereClause = {};
+    if (role !== "ADMIN") {
+      whereClause = {
+        OR: [
+          { createdById: userId },
+          { members: { some: { id: userId } } },
+        ],
+      };
     }
 
-    return NextResponse.json(projects);
+    const [projects, total] = await Promise.all([
+      prisma.project.findMany({
+        where: whereClause,
+        include: {
+          createdBy: { select: { name: true, email: true } },
+          members: { select: { id: true, name: true, avatar: true } },
+          tasks: { select: { id: true, status: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.project.count({ where: whereClause })
+    ]);
+
+    return NextResponse.json({
+      data: projects,
+      meta: {
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      }
+    });
   } catch (error) {
     console.error("GET Projects Exception:", error);
     return NextResponse.json({ error: "Failed to query projects" }, { status: 500 });

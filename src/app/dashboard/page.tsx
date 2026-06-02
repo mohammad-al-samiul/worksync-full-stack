@@ -1,417 +1,332 @@
 "use client";
 
-import React, { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   FolderKanban,
-  CheckSquare,
-  Users,
-  TrendingUp,
-  Plus,
-  ArrowUpRight,
-  Clock,
-  Sparkles,
-  ShieldAlert,
-  Sliders,
-  Play,
   CheckCircle2,
+  Clock,
+  AlertCircle,
+  Activity,
+  Calendar,
+  Zap,
 } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+} from "recharts";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
 
-interface MetricCard {
-  title: string;
-  value: string;
-  change: string;
-  positive: boolean;
-  icon: React.ComponentType<any>;
-  accent: "cyan" | "purple" | "emerald";
-}
-
-interface ProjectItem {
-  id: string;
-  name: string;
-  desc: string;
-  progress: number;
-  priority: "High" | "Medium" | "Low";
-  status: "Active" | "Completed" | "Review";
-  contributors: string[];
-}
-
-export default function Dashboard() {
+export default function DashboardPage() {
   const { user } = useAuth();
-  const [tasks, setTasks] = useState([
-    { id: "1", text: "Integrate framer-motion page router transitions", completed: true },
-    { id: "2", text: "Verify cyber theme CSS variable mappings", completed: false },
-    { id: "3", text: "Design responsive collapsible sidebar menu", completed: true },
-    { id: "4", text: "Audit auth credentials matching rules", completed: false },
-  ]);
-  const [newTaskText, setNewTaskText] = useState("");
+  
+  // State for data
+  const [projects, setProjects] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const metrics: MetricCard[] = [
-    {
-      title: "Active Projects",
-      value: "8 Active",
-      change: "+12.4% this month",
-      positive: true,
-      icon: FolderKanban,
-      accent: "cyan",
-    },
-    {
-      title: "Tasks Completed",
-      value: "42 / 64",
-      change: "+8.2% vs last week",
-      positive: true,
-      icon: CheckSquare,
-      accent: "purple",
-    },
-    {
-      title: "Team Members",
-      value: "14 Eng",
-      change: "+2 members added",
-      positive: true,
-      icon: Users,
-      accent: "cyan",
-    },
-    {
-      title: "Efficiency Index",
-      value: "94.8%",
-      change: "-1.1% dip today",
-      positive: false,
-      icon: TrendingUp,
-      accent: "emerald",
-    },
+  // Fallback / Mock Data
+  const mockTaskDistribution = [
+    { name: "To Do", value: 12, color: "#94a3b8" }, // slate-400
+    { name: "In Progress", value: 18, color: "#00f2fe" }, // cyan-accent
+    { name: "Completed", value: 24, color: "#10b981" }, // emerald-accent
   ];
 
-  const [projects, setProjects] = useState<ProjectItem[]>([
-    {
-      id: "p1",
-      name: "Cyber Interface System",
-      desc: "Implement Next.js 16 app layout styling using custom CSS variables.",
-      progress: 68,
-      priority: "High",
-      status: "Active",
-      contributors: [
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80",
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80",
-      ],
-    },
-    {
-      id: "p2",
-      name: "WorkSync Database Sync",
-      desc: "Architect background jobs for auto-fetching telemetry metrics.",
-      progress: 85,
-      priority: "Medium",
-      status: "Active",
-      contributors: [
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80",
-      ],
-    },
-    {
-      id: "p3",
-      name: "Glassmorphism Themes",
-      desc: "Optimize theme context rendering loops to remove styling mismatches.",
-      progress: 100,
-      priority: "Low",
-      status: "Completed",
-      contributors: [
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80",
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80",
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80",
-      ],
-    },
-  ]);
+  const mockProgressTrend = [
+    { name: "Mon", tasks: 4 },
+    { name: "Tue", tasks: 7 },
+    { name: "Wed", tasks: 5 },
+    { name: "Thu", tasks: 12 },
+    { name: "Fri", tasks: 18 },
+    { name: "Sat", tasks: 14 },
+    { name: "Sun", tasks: 20 },
+  ];
 
-  const handleToggleTask = (id: string) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+  const mockWorkload = [
+    { name: "Alex", total: 15, completed: 10 },
+    { name: "Sarah", total: 12, completed: 8 },
+    { name: "Marcus", total: 8, completed: 7 },
+    { name: "Kyle", total: 20, completed: 5 },
+  ];
+
+  const mockActivities = [
+    { id: 1, text: "Task 'Setup API' assigned to John", time: "10:15 AM", type: "assignment" },
+    { id: 2, text: "Project 'Cyber UI' marked as ACTIVE", time: "09:30 AM", type: "status" },
+    { id: 3, text: "Sarah completed 'Database Schema'", time: "Yesterday", type: "completion" },
+    { id: 4, text: "Overdue alert: 'Auth Middleware'", time: "Yesterday", type: "alert" },
+    { id: 5, text: "Alex commented on 'Redis Cache'", time: "2 days ago", type: "comment" },
+  ];
+
+  const mockUpcomingTasks = [
+    { id: 1, title: "Finalize GraphQL Types", deadline: "Today, 5:00 PM", priority: "HIGH" },
+    { id: 2, title: "Review Pull Request #42", deadline: "Tomorrow", priority: "MEDIUM" },
+    { id: 3, title: "Deploy Staging Environment", deadline: "Friday", priority: "HIGH" },
+  ];
+
+  useEffect(() => {
+    // In a real app, we would fetch from our /api endpoints here.
+    // For now, we simulate a loading state and then use the mock data if no db data exists.
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // const [projRes, taskRes, actRes] = await Promise.all([
+        //   fetch("/api/projects"),
+        //   fetch("/api/tasks"),
+        //   fetch("/api/activity")
+        // ]);
+        // ... (data mapping logic would go here)
+        
+        // Simulating network delay
+        setTimeout(() => {
+          setLoading(false);
+        }, 800);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants: any = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-cyan-accent"></div>
+      </div>
     );
-  };
-
-  const handleAddTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTaskText.trim()) return;
-    setTasks((prev) => [
-      ...prev,
-      { id: Date.now().toString(), text: newTaskText.trim(), completed: false },
-    ]);
-    setNewTaskText("");
-  };
-
-  const getGlowClass = (accent: string) => {
-    switch (accent) {
-      case "cyan":
-        return "cyber-glow-cyan cyber-glow-cyan-hover";
-      case "purple":
-        return "cyber-glow-purple cyber-glow-purple-hover";
-      default:
-        return "cyber-glow-emerald cyber-glow-emerald-hover";
-    }
-  };
-
-  const getTextColor = (accent: string) => {
-    switch (accent) {
-      case "cyan":
-        return "text-cyan-accent";
-      case "purple":
-        return "text-purple-accent";
-      default:
-        return "text-emerald-accent";
-    }
-  };
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Banner */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl border border-card-border bg-card/45 glassmorphism relative overflow-hidden"
-      >
-        <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-accent/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="space-y-1 relative z-10">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-cyan-accent flex items-center gap-1.5 bg-cyan-accent/10 px-2.5 py-0.5 rounded-full border border-cyan-accent/20">
-              <Sparkles className="h-3 w-3 animate-spin" /> Live Session
-            </span>
-            <span className="text-xs text-muted">•</span>
-            <span className="text-xs font-medium text-muted">{user?.role} Mode</span>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Welcome back, <span className="bg-gradient-to-r from-cyan-accent to-purple-accent bg-clip-text text-transparent">{user?.name}</span>
-          </h1>
-          <p className="text-xs text-muted">
-            Here is what is happening across your projects today.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <button className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-gradient-to-r from-cyan-accent to-purple-accent hover:from-cyan-accent hover:to-purple-accent text-slate-950 text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-lg shadow-purple-accent/15 cursor-pointer">
-            <Plus className="h-4 w-4" />
-            <span>New Project</span>
-          </button>
-        </div>
-      </motion.div>
-
-      {/* Role-Based Insight Banners */}
-      {user?.role === "Admin" && (
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="p-4 rounded-xl border border-purple-accent/30 bg-purple-accent/5 text-purple-accent flex items-center justify-between gap-4 shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <Sliders className="h-5 w-5 shrink-0" />
-            <div className="text-left">
-              <p className="text-xs font-bold uppercase tracking-wider">Administrator Workspace Privileges Active</p>
-              <p className="text-[11px] text-muted leading-tight mt-0.5">You have read-write auth configs, database sync actions, and telemetry adjustments.</p>
-            </div>
-          </div>
-          <button className="text-[11px] font-bold underline shrink-0 hover:text-white transition-colors cursor-pointer">
-            Run Telemetry Audit
-          </button>
-        </motion.div>
-      )}
-
-      {user?.role === "Manager" && (
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="p-4 rounded-xl border border-cyan-accent/30 bg-cyan-accent/5 text-cyan-accent flex items-center justify-between gap-4 shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <ShieldAlert className="h-5 w-5 shrink-0" />
-            <div className="text-left">
-              <p className="text-xs font-bold uppercase tracking-wider">Manager moderation active</p>
-              <p className="text-[11px] text-muted leading-tight mt-0.5">You can adjust task priorities, edit project contributors, and dispatch project warnings.</p>
-            </div>
-          </div>
-          <button className="text-[11px] font-bold underline shrink-0 hover:text-white transition-colors cursor-pointer">
-            Update Priorities
-          </button>
-        </motion.div>
-      )}
-
-      {/* Metric Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {metrics.map((m, idx) => {
-          const Icon = m.icon;
-          return (
-            <motion.div
-              key={m.title}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.08, duration: 0.3 }}
-              className={cn(
-                "p-5 rounded-2xl border border-card-border bg-card/40 glassmorphism relative overflow-hidden group shadow-sm transition-all duration-300",
-                getGlowClass(m.accent)
-              )}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold text-muted uppercase tracking-wider">{m.title}</span>
-                <div className={cn("p-2 rounded-lg bg-card border border-card-border/60", getTextColor(m.accent))}>
-                  <Icon className="h-4.5 w-4.5" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <p className="text-2xl font-bold tracking-tight text-foreground">{m.value}</p>
-                <div className="flex items-center gap-1.5">
-                  <span className={cn("text-[10px] font-semibold", m.positive ? "text-emerald-accent" : "text-rose-500")}>
-                    {m.change.split(" ")[0]}
-                  </span>
-                  <span className="text-[10px] text-muted">{m.change.split(" ").slice(1).join(" ")}</span>
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
+      {/* Header */}
+      <div>
+        <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight">
+          Dashboard
+        </motion.h1>
+        <motion.p variants={itemVariants} className="text-sm text-muted mt-1">
+          System overview and productivity metrics for your workspace.
+        </motion.p>
       </div>
 
-      {/* Main Core Layout: Projects Grid & Task List */}
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {[
+          { title: "Total Projects", value: "14", icon: FolderKanban, color: "text-purple-accent", bg: "bg-purple-accent/10" },
+          { title: "Total Tasks", value: "156", icon: Activity, color: "text-cyan-accent", bg: "bg-cyan-accent/10" },
+          { title: "Completed", value: "84", icon: CheckCircle2, color: "text-emerald-accent", bg: "bg-emerald-accent/10" },
+          { title: "Pending", value: "62", icon: Clock, color: "text-slate-400", bg: "bg-slate-400/10" },
+          { title: "Overdue", value: "10", icon: AlertCircle, color: "text-rose-500", bg: "bg-rose-500/10", glow: true },
+        ].map((kpi, index) => (
+          <motion.div
+            key={index}
+            variants={itemVariants}
+            className={cn(
+              "relative overflow-hidden rounded-2xl border bg-card/45 glassmorphism p-5 transition-all hover:bg-card/60",
+              kpi.glow ? "border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.15)] animate-pulse-slow" : "border-card-border"
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">{kpi.title}</span>
+              <div className={cn("p-2 rounded-lg", kpi.bg)}>
+                <kpi.icon className={cn("h-4 w-4", kpi.color)} />
+              </div>
+            </div>
+            <div className="mt-4">
+              <span className={cn("text-3xl font-extrabold tracking-tight", kpi.glow ? "text-rose-500" : "")}>{kpi.value}</span>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Projects Panel */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-base font-bold tracking-tight flex items-center gap-2">
-              <FolderKanban className="h-4.5 w-4.5 text-purple-accent" />
-              <span>Project Pipelines</span>
-            </h2>
-            <button className="text-xs font-semibold text-cyan-accent hover:underline flex items-center gap-0.5 cursor-pointer">
-              <span>View all</span>
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </button>
+        {/* Doughnut Chart */}
+        <motion.div variants={itemVariants} className="rounded-2xl border border-card-border bg-card/45 glassmorphism p-5 flex flex-col">
+          <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
+            <CheckCircle2 className="h-4 w-4 text-cyan-accent" /> Task Status Distribution
+          </h3>
+          <div className="flex-1 min-h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={mockTaskDistribution}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {mockTaskDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <RechartsTooltip
+                  contentStyle={{ backgroundColor: "#0f172a", borderColor: "#1e293b", borderRadius: "8px", fontSize: "12px" }}
+                  itemStyle={{ color: "#e2e8f0" }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-
-          <div className="space-y-4">
-            {projects.map((proj, idx) => (
-              <motion.div
-                key={proj.id}
-                initial={{ opacity: 0, x: -15 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1, duration: 0.3 }}
-                className="p-5 rounded-2xl border border-card-border bg-card/35 glassmorphism hover:bg-card/50 transition-all duration-300 relative group"
-              >
-                <div className="flex items-start justify-between gap-4 mb-3">
-                  <div className="space-y-0.5">
-                    <h3 className="font-bold text-sm text-foreground group-hover:text-cyan-accent transition-colors">
-                      {proj.name}
-                    </h3>
-                    <p className="text-xs text-muted leading-snug">{proj.desc}</p>
-                  </div>
-                  <span
-                    className={cn(
-                      "px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wider shrink-0",
-                      proj.priority === "High"
-                        ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
-                        : proj.priority === "Medium"
-                        ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                        : "bg-emerald-accent/10 text-emerald-accent border-emerald-accent/20"
-                    )}
-                  >
-                    {proj.priority}
-                  </span>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t border-card-border/30">
-                  {/* Progress Gauge */}
-                  <div className="flex-1 max-w-xs space-y-1">
-                    <div className="flex items-center justify-between text-[10px] font-semibold text-muted">
-                      <span>Progress</span>
-                      <span className="text-foreground">{proj.progress}%</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-foreground/5 dark:bg-foreground/10 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${proj.progress}%` }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                        className={cn(
-                          "h-full rounded-full",
-                          proj.progress === 100 ? "bg-emerald-accent" : "bg-gradient-to-r from-cyan-accent to-purple-accent"
-                        )}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Contributor Avatars */}
-                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                    <div className="flex -space-x-2">
-                      {proj.contributors.map((avatar, cIdx) => (
-                        <img
-                          key={cIdx}
-                          src={avatar}
-                          alt="Contributor"
-                          className="h-6.5 w-6.5 rounded-full border-2 border-background object-cover bg-slate-900"
-                        />
-                      ))}
-                    </div>
-                    <span className="text-[10px] font-bold text-muted flex items-center gap-1">
-                      <Clock className="h-3 w-3 text-cyan-accent" /> {proj.status}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
+          {/* Legend */}
+          <div className="flex justify-center gap-4 mt-2">
+            {mockTaskDistribution.map((entry, idx) => (
+              <div key={idx} className="flex items-center gap-1.5 text-xs text-muted">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                {entry.name}
+              </div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        {/* Tasks List Panel */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-base font-bold tracking-tight flex items-center gap-2">
-              <CheckSquare className="h-4.5 w-4.5 text-cyan-accent" />
-              <span>Sprint Tasks</span>
-            </h2>
-            <span className="text-[10px] font-semibold bg-emerald-accent/10 border border-emerald-accent/20 text-emerald-accent px-2 py-0.5 rounded-full">
-              {tasks.filter((t) => t.completed).length}/{tasks.length} Done
-            </span>
+        {/* Area Chart */}
+        <motion.div variants={itemVariants} className="lg:col-span-2 rounded-2xl border border-card-border bg-card/45 glassmorphism p-5 flex flex-col">
+          <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
+            <Activity className="h-4 w-4 text-purple-accent" /> Project Progress Trend
+          </h3>
+          <div className="flex-1 min-h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={mockProgressTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorTasks" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#9d4edd" stopOpacity={0.5}/>
+                    <stop offset="95%" stopColor="#9d4edd" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                <RechartsTooltip
+                  contentStyle={{ backgroundColor: "#0f172a", borderColor: "#1e293b", borderRadius: "8px", fontSize: "12px" }}
+                />
+                <Area type="monotone" dataKey="tasks" stroke="#9d4edd" strokeWidth={3} fillOpacity={1} fill="url(#colorTasks)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
+        </motion.div>
+      </div>
 
-          <div className="p-5 rounded-2xl border border-card-border bg-card/35 glassmorphism space-y-4">
-            {/* Add Task Form */}
-            <form onSubmit={handleAddTask} className="flex gap-2">
-              <input
-                type="text"
-                value={newTaskText}
-                onChange={(e) => setNewTaskText(e.target.value)}
-                placeholder="Assign new task..."
-                className="flex-1 h-9 px-3 bg-slate-950/40 dark:bg-slate-950/65 rounded-lg border border-card-border/60 text-xs focus:outline-none focus:border-cyan-accent transition-all placeholder:text-muted"
-              />
-              <button
-                type="submit"
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-accent hover:bg-cyan-accent text-slate-950 cursor-pointer shadow-md shadow-cyan-accent/10 active:scale-95 transition-all"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            </form>
+      {/* Lower Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Bar Chart */}
+        <motion.div variants={itemVariants} className="lg:col-span-2 rounded-2xl border border-card-border bg-card/45 glassmorphism p-5 flex flex-col">
+           <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
+            <Zap className="h-4 w-4 text-emerald-accent" /> Member Workload Summary
+          </h3>
+          <div className="flex-1 min-h-[250px]">
+             <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={mockWorkload} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                <RechartsTooltip
+                  cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                  contentStyle={{ backgroundColor: "#0f172a", borderColor: "#1e293b", borderRadius: "8px", fontSize: "12px" }}
+                />
+                <Bar dataKey="total" fill="#1e293b" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="completed" fill="#00f2fe" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+           {/* Legend */}
+           <div className="flex justify-center gap-4 mt-2">
+              <div className="flex items-center gap-1.5 text-xs text-muted">
+                <span className="h-2 w-2 rounded-full bg-slate-800" />
+                Assigned
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-muted">
+                <span className="h-2 w-2 rounded-full bg-cyan-accent" />
+                Completed
+              </div>
+          </div>
+        </motion.div>
 
-            {/* Task Checklist items */}
-            <div className="space-y-2.5">
-              {tasks.map((task) => (
-                <div
-                  key={task.id}
-                  onClick={() => handleToggleTask(task.id)}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-card-border/50 bg-card/20 hover:bg-card/45 transition-all duration-200 cursor-pointer group"
-                >
-                  <button className="shrink-0 flex items-center justify-center h-4.5 w-4.5 rounded-md border border-card-border group-hover:border-cyan-accent/60 bg-slate-950/40 text-cyan-accent transition-colors">
-                    {task.completed && <CheckCircle2 className="h-4.5 w-4.5 fill-cyan-accent text-slate-950" />}
-                  </button>
-                  <span
-                    className={cn(
-                      "text-xs font-medium transition-all duration-300 select-none",
-                      task.completed ? "line-through text-muted opacity-60" : "text-foreground"
-                    )}
-                  >
-                    {task.text}
+        {/* Activity Widget */}
+        <motion.div variants={itemVariants} className="rounded-2xl border border-card-border bg-card/45 glassmorphism p-5">
+           <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
+            <Clock className="h-4 w-4 text-sky-400" /> Recent Activity Log
+          </h3>
+          <div className="space-y-4 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-700 before:to-transparent">
+            {mockActivities.map((activity, index) => (
+               <div key={activity.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                  <div className="flex items-center justify-center w-5 h-5 rounded-full border border-card-border bg-slate-900 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow shadow-slate-900 z-10">
+                      <div className="w-1.5 h-1.5 bg-sky-400 rounded-full"></div>
+                  </div>
+                  <div className="w-[calc(100%-2rem)] md:w-[calc(50%-1.5rem)] p-3 rounded-xl border border-card-border bg-slate-900/40 shadow">
+                      <div className="flex items-center justify-between mb-1">
+                          <time className="text-[9px] font-bold text-sky-400 uppercase tracking-wider">{activity.time}</time>
+                      </div>
+                      <div className="text-xs text-slate-300">{activity.text}</div>
+                  </div>
+               </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+      
+      {/* Quick Actions / Shortcuts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+         <motion.div variants={itemVariants} className="rounded-2xl border border-card-border bg-card/45 glassmorphism p-5">
+            <h3 className="text-sm font-bold flex items-center gap-2 mb-4">
+              <Calendar className="h-4 w-4 text-rose-500" /> Upcoming Deadlines & High Priority
+            </h3>
+            <div className="space-y-3">
+              {mockUpcomingTasks.map((task) => (
+                <div key={task.id} className="flex items-center justify-between p-3 rounded-xl border border-card-border bg-slate-900/50 hover:bg-slate-800/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <button className="h-5 w-5 rounded-full border border-slate-500 flex items-center justify-center hover:border-emerald-accent hover:text-emerald-accent transition-colors">
+                       <CheckCircle2 className="h-3 w-3 opacity-0 hover:opacity-100" />
+                    </button>
+                    <div>
+                      <p className="text-xs font-semibold">{task.title}</p>
+                      <p className="text-[10px] text-muted mt-0.5">{task.deadline}</p>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "text-[9px] font-bold px-2 py-0.5 rounded-full border",
+                    task.priority === "HIGH" ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                  )}>
+                    {task.priority}
                   </span>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-
+         </motion.div>
       </div>
-    </div>
+
+    </motion.div>
   );
 }
