@@ -1,0 +1,127 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  PROJECT_MANAGER
+  TEAM_MEMBER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  ON_HOLD
+}
+
+enum TaskPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+}
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         Role          @default(TEAM_MEMBER)
+  avatar       String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Relationships
+  createdProjects Project[]     @relation("ProjectCreator")
+  memberProjects  Project[]     @relation("ProjectMembers")
+  assignedTasks   Task[]        @relation("TaskAssignee")
+  comments        Comment[]
+  activityLogs    ActivityLog[]
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  deadline    DateTime?
+  status      ProjectStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Creator relationship
+  createdById String
+  createdBy   User          @relation("ProjectCreator", fields: [createdById], references: [id])
+
+  // Members relationship (Many-to-Many via implicit join table in Prisma)
+  members     User[]        @relation("ProjectMembers")
+
+  // Tasks relationship
+  tasks       Task[]
+}
+
+model Task {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  dueDate     DateTime?
+  priority    TaskPriority @default(MEDIUM)
+  status      TaskStatus   @default(TODO)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Project relationship
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Assignee relationship
+  assignedToId String?
+  assignedTo   User?       @relation("TaskAssignee", fields: [assignedToId], references: [id])
+
+  // Sub-items
+  comments    Comment[]
+  attachments Attachment[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  text      String
+  createdAt DateTime @default(now())
+
+  // Author relationship
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+
+  // Task relationship
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  name      String
+  url       String
+  createdAt DateTime @default(now())
+
+  // Task relationship
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model ActivityLog {
+  id                String   @id @default(uuid())
+  timestamp         DateTime @default(now())
+  actionDescription String
+
+  // Actor relationship
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+}
