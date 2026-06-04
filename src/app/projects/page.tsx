@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ActionOverlay } from "@/components/ActionOverlay";
-import { StyledSelect } from "@/components/StyledSelect";
+import { CyberDropdown } from "@/components/CyberDropdown";
 import { cn } from "@/lib/utils";
 import { apiFetch, parseJson, type PaginatedResponse } from "@/lib/api";
 
@@ -26,6 +26,18 @@ const projectSchema = z.object({
 });
 
 type ProjectFormValues = z.infer<typeof projectSchema>;
+
+const PROJECT_STATUS_OPTIONS = [
+  { value: "ALL", label: "All Status" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "ON_HOLD", label: "On Hold" },
+] as const;
+
+const PROJECT_SORT_OPTIONS = [
+  { value: "LATEST", label: "Latest Created" },
+  { value: "DEADLINE", label: "Nearest Deadline" },
+] as const;
 
 interface Member {
   id: string;
@@ -184,22 +196,23 @@ export default function ProjectsPage() {
         <div className="flex items-center gap-3 w-full lg:w-auto">
           <div className="flex items-center gap-2 rounded-xl border border-card-border bg-slate-900/50 px-3 py-2">
             <Filter className="h-4 w-4 shrink-0 text-muted" />
-            <StyledSelect
+            <CyberDropdown
               variant="inline"
+              accent="cyan"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="ALL">All Status</option>
-              <option value="ACTIVE">Active</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="ON_HOLD">On Hold</option>
-            </StyledSelect>
+              onChange={setStatusFilter}
+              options={[...PROJECT_STATUS_OPTIONS]}
+              menuClassName="min-w-[160px]"
+            />
           </div>
 
-          <StyledSelect value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="LATEST">Latest Created</option>
-            <option value="DEADLINE">Nearest Deadline</option>
-          </StyledSelect>
+          <CyberDropdown
+            variant="filter"
+            accent="purple"
+            value={sortBy}
+            onChange={setSortBy}
+            options={[...PROJECT_SORT_OPTIONS]}
+          />
         </div>
       </div>
 

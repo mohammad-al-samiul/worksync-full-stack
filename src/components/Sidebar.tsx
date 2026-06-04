@@ -13,8 +13,8 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
-  Terminal,
 } from "lucide-react";
+import { WorkSyncLogo } from "@/components/WorkSyncLogo";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
@@ -52,22 +52,13 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
       )}
     >
       {/* Sidebar Header Logo */}
-      <div className="flex h-16 items-center justify-between px-4 border-b border-card-border/50">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-purple-accent to-cyan-accent shadow-[0_0_12px_rgba(157,78,221,0.4)]">
-            <Terminal className="h-5 w-5 text-white" />
-          </div>
-          {!isCollapsed && (
-            <motion.span
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              className="text-lg font-bold tracking-wider bg-gradient-to-r from-cyan-accent to-purple-accent bg-clip-text text-transparent"
-            >
-              WORKSYNC
-            </motion.span>
-          )}
-        </div>
+      <div className="flex h-16 items-center justify-between px-3 border-b border-card-border/50">
+        <WorkSyncLogo
+          size="sm"
+          showText={!isCollapsed}
+          href="/dashboard"
+          className={cn("min-w-0", isCollapsed && "justify-center w-full")}
+        />
       </div>
 
       {/* Navigation Links */}

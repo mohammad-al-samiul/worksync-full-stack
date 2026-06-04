@@ -9,11 +9,11 @@ import {
   User,
   Shield,
   ArrowRight,
-  Terminal,
   Activity,
   Zap,
 } from "lucide-react";
 import { SubmitButton } from "@/components/SubmitButton";
+import { WorkSyncLogo } from "@/components/WorkSyncLogo";
 import { cn } from "@/lib/utils";
 
 const DEMO_CREDENTIALS: Record<UserRole, { email: string; password: string }> = {
@@ -90,15 +90,7 @@ export default function AuthPage() {
         <div className="flex-1 rounded-t-2xl md:rounded-t-none md:rounded-l-2xl border-t border-x md:border-y md:border-l border-purple-accent/20 bg-slate-950/45 glassmorphism p-8 md:p-12 flex flex-col justify-between overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-accent/5 to-transparent pointer-events-none" />
           
-          {/* Logo */}
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-accent to-cyan-accent shadow-[0_0_15px_rgba(157,78,221,0.5)]">
-              <Terminal className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-xl font-bold tracking-wider bg-gradient-to-r from-cyan-accent to-purple-accent bg-clip-text text-transparent">
-              WORKSYNC
-            </span>
-          </div>
+          <WorkSyncLogo size="lg" className="relative z-10" />
 
           {/* Slogan */}
           <div className="my-12 space-y-4 relative z-10">

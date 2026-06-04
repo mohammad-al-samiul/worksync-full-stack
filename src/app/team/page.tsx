@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Users, Mail, UserPlus, Shield, MessageSquare, Search, Award } from "lucide-react";
 import { motion } from "framer-motion";
 import { SubmitButton } from "@/components/SubmitButton";
-import { StyledSelect } from "@/components/StyledSelect";
+import { CyberDropdown } from "@/components/CyberDropdown";
 import { cn } from "@/lib/utils";
 import { apiFetch, parseJson } from "@/lib/api";
 import { apiRoleToDisplay, displayRoleToApi } from "@/lib/roles";
@@ -204,19 +204,20 @@ export default function TeamPage() {
 
             <div className="space-y-1.5">
               <label className="text-[10px] uppercase tracking-wider text-muted font-bold">Role Access</label>
-              <StyledSelect
+              <CyberDropdown
                 variant="form"
                 value={inviteRole}
                 disabled={isInviting}
-                onChange={(e) =>
-                  setInviteRole(e.target.value as "Admin" | "Manager" | "Member")
+                onChange={(v) =>
+                  setInviteRole(v as "Admin" | "Manager" | "Member")
                 }
-                className="h-10 rounded-lg border-card-border/60 bg-slate-950/60 text-xs"
-              >
-                <option value="Member">Member (Limited)</option>
-                <option value="Manager">Manager (Moderator)</option>
-                <option value="Admin">Admin (Full Access)</option>
-              </StyledSelect>
+                className="w-full [&_button]:h-10 [&_button]:rounded-lg [&_button]:border-card-border/60 [&_button]:bg-slate-950/60 [&_button]:text-xs"
+                options={[
+                  { value: "Member", label: "Member (Limited)" },
+                  { value: "Manager", label: "Manager (Moderator)" },
+                  { value: "Admin", label: "Admin (Full Access)" },
+                ]}
+              />
             </div>
 
             <SubmitButton

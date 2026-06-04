@@ -18,6 +18,7 @@ import TaskDetailModal from "@/components/TaskDetailModal";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ActionOverlay } from "@/components/ActionOverlay";
 import { StyledSelect } from "@/components/StyledSelect";
+import { CyberDropdown } from "@/components/CyberDropdown";
 import { cn } from "@/lib/utils";
 import { apiFetch, parseJson, type PaginatedResponse } from "@/lib/api";
 
@@ -31,6 +32,32 @@ const taskSchema = z.object({
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
+
+const TASK_STATUS_FILTER_OPTIONS = [
+  { value: "ALL", label: "All Status" },
+  { value: "TODO", label: "To Do" },
+  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "COMPLETED", label: "Completed" },
+];
+
+const TASK_PRIORITY_FILTER_OPTIONS = [
+  { value: "ALL", label: "All Priorities" },
+  { value: "HIGH", label: "High" },
+  { value: "MEDIUM", label: "Medium" },
+  { value: "LOW", label: "Low" },
+];
+
+const TASK_DEADLINE_FILTER_OPTIONS = [
+  { value: "ALL", label: "All Dates" },
+  { value: "UPCOMING", label: "Upcoming" },
+  { value: "OVERDUE", label: "Overdue" },
+];
+
+const TASK_SORT_OPTIONS = [
+  { value: "DEADLINE", label: "Nearest Deadline" },
+  { value: "PRIORITY", label: "Highest Priority" },
+  { value: "LATEST", label: "Latest Created" },
+];
 
 export default function TasksPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -227,44 +254,27 @@ export default function TasksPage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
-          <StyledSelect
+          <CyberDropdown
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="ALL">All Status</option>
-            <option value="TODO">To Do</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="COMPLETED">Completed</option>
-          </StyledSelect>
-
-          <StyledSelect
+            onChange={setStatusFilter}
+            options={TASK_STATUS_FILTER_OPTIONS}
+          />
+          <CyberDropdown
             value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-          >
-            <option value="ALL">All Priorities</option>
-            <option value="HIGH">High</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="LOW">Low</option>
-          </StyledSelect>
-
-          <StyledSelect
+            onChange={setPriorityFilter}
+            options={TASK_PRIORITY_FILTER_OPTIONS}
+          />
+          <CyberDropdown
             value={deadlineFilter}
-            onChange={(e) => setDeadlineFilter(e.target.value)}
-          >
-            <option value="ALL">All Dates</option>
-            <option value="UPCOMING">Upcoming</option>
-            <option value="OVERDUE">Overdue</option>
-          </StyledSelect>
-
-          <StyledSelect
+            onChange={setDeadlineFilter}
+            options={TASK_DEADLINE_FILTER_OPTIONS}
+          />
+          <CyberDropdown
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="text-cyan-accent"
-          >
-            <option value="DEADLINE">Nearest Deadline</option>
-            <option value="PRIORITY">Highest Priority</option>
-            <option value="LATEST">Latest Created</option>
-          </StyledSelect>
+            onChange={setSortBy}
+            options={TASK_SORT_OPTIONS}
+            className="[&_button]:text-cyan-accent"
+          />
         </div>
       </div>
 
@@ -312,12 +322,19 @@ export default function TasksPage() {
                           <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-accent" />
                         </div>
                       )}
-                      <StyledSelect
+                      <CyberDropdown
                         variant="status"
                         value={task.status}
                         disabled={updatingStatusId === task.id}
-                        onChange={(e) => updateTaskStatus(task.id, e.target.value)}
-                        className={cn(
+                        onChange={(v) => updateTaskStatus(task.id, v)}
+                        align="right"
+                        menuClassName="min-w-[140px]"
+                        options={[
+                          { value: "TODO", label: "To Do" },
+                          { value: "IN_PROGRESS", label: "In Progress" },
+                          { value: "COMPLETED", label: "Completed" },
+                        ]}
+                        triggerClassName={cn(
                           task.status === "COMPLETED"
                             ? "text-emerald-accent border-emerald-accent/30"
                             : task.status === "IN_PROGRESS"
@@ -325,11 +342,7 @@ export default function TasksPage() {
                               : "text-slate-400 border-slate-700",
                           updatingStatusId === task.id && "opacity-40"
                         )}
-                      >
-                        <option value="TODO">To Do</option>
-                        <option value="IN_PROGRESS">In Progress</option>
-                        <option value="COMPLETED">Completed</option>
-                      </StyledSelect>
+                      />
                     </div>
                   </div>
                   

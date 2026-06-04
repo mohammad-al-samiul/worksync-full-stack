@@ -7,6 +7,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2 } from "lucide-react";
+import { WorkSyncLogo } from "@/components/WorkSyncLogo";
 import { cn } from "@/lib/utils";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -41,14 +42,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0b0f19] text-white cyber-mesh cyber-grid">
         <div className="flex flex-col items-center gap-4 p-8 rounded-2xl border border-purple-accent/20 bg-slate-900/60 glassmorphism shadow-[0_0_50px_rgba(157,78,221,0.15)]">
+          <WorkSyncLogo showText={false} size="md" />
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-tr from-cyan-accent to-purple-accent p-0.5"
+            className="flex h-8 w-8 items-center justify-center"
           >
-            <div className="flex h-full w-full items-center justify-center rounded-full bg-[#0b0f19]">
-              <Loader2 className="h-6 w-6 text-cyan-accent animate-pulse" />
-            </div>
+            <Loader2 className="h-6 w-6 text-cyan-accent" />
           </motion.div>
           <div className="text-center">
             <h2 className="text-sm font-semibold tracking-wider uppercase text-cyan-accent animate-pulse-glow">

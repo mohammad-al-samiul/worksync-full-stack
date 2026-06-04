@@ -18,6 +18,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "WorkSync | Smart Project & Task Collaboration System",
   description: "A premium, glassmorphic collaboration console with smart dashboards, tasks lists, real-time activity metrics, and role-based views.",
+  icons: {
+    icon: [{ url: "/worksync-icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/worksync-icon.svg", type: "image/svg+xml" }],
+    shortcut: "/worksync-icon.svg",
+  },
 };
 
 export default function RootLayout({
