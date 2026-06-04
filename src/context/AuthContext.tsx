@@ -54,7 +54,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const token = getStoredToken();
     if (savedUser && token) {
       try {
-        setUser(JSON.parse(savedUser));
+        const payload = JSON.parse(atob(token.split(".")[1] ?? ""));
+        const expired =
+          typeof payload.exp === "number" && payload.exp * 1000 < Date.now();
+        if (expired) {
+          localStorage.removeItem("user");
+          setStoredToken(null);
+        } else {
+          setUser(JSON.parse(savedUser));
+        }
       } catch {
         localStorage.removeItem("user");
         setStoredToken(null);

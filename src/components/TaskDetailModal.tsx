@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Upload, Image as ImageIcon, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
+import { isImageAttachment } from "@/lib/attachment-utils";
 
 // Types
 interface Task {
@@ -33,25 +34,26 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
   const [uploadState, setUploadState] = useState<"idle" | "uploading" | "done">("idle");
   const [previewFiles, setPreviewFiles] = useState<File[]>([]);
 
-  // Fetch task details (including comments & attachments)
-  useEffect(() => {
+  const fetchTask = useCallback(async (showLoading = true) => {
     if (!taskId) return;
-    const fetchTask = async () => {
-      setLoading(true);
-      try {
-        const res = await apiFetch(`/api/tasks/${taskId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setTask(data);
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+    if (showLoading) setLoading(true);
+    try {
+      const res = await apiFetch(`/api/tasks/${taskId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTask(data);
       }
-    };
-    fetchTask();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   }, [taskId]);
+
+  useEffect(() => {
+    if (!open || !taskId) return;
+    void fetchTask();
+  }, [open, taskId, fetchTask]);
 
   // Post new comment
   const handleCommentSubmit = async (e: React.FormEvent) => {
@@ -97,11 +99,9 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
         }
       }
       if (uploaded.length) {
-        setTask((prev) =>
-          prev && { ...prev, attachments: [...(prev.attachments || []), ...uploaded] }
-        );
         setPreviewFiles([]);
         setUploadState("done");
+        await fetchTask(false);
         setTimeout(() => setUploadState("idle"), 1500);
       } else {
         setUploadState("idle");
@@ -218,21 +218,62 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
 
               {/* Attachments */}
               <section className="border-t border-card-border pt-4">
-                <h3 className="font-semibold mb-2">Attachments</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {task.attachments && task.attachments.map((a) => (
-                    <a
-                      key={a.id}
-                      href={a.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-2 border rounded-lg hover:bg-card/40"
-                    >
-                      <FileText className="h-5 w-5 text-muted" />
-                      <span className="truncate text-sm">{a.name}</span>
-                    </a>
-                  ))}
-                </div>
+                <h3 className="font-semibold mb-2">
+                  Attachments
+                  {task.attachments?.length ? (
+                    <span className="ml-1 text-xs font-normal text-muted">
+                      ({task.attachments.length})
+                    </span>
+                  ) : null}
+                </h3>
+                {task.attachments?.length ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    {task.attachments.map((a) => {
+                      const isImage = isImageAttachment(a.name);
+                      const isBrokenMock = a.url.startsWith("/mock-uploads/");
+                      return (
+                        <a
+                          key={a.id}
+                          href={a.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex flex-col gap-2 p-2 border border-card-border rounded-lg hover:bg-card/40 hover:border-cyan-accent/40 transition overflow-hidden"
+                        >
+                          {isImage && !isBrokenMock ? (
+                            <div className="relative aspect-video w-full overflow-hidden rounded-md bg-slate-900/60">
+                              <img
+                                src={a.url}
+                                alt={a.name}
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex h-16 items-center justify-center rounded-md bg-slate-900/60">
+                              <FileText className="h-7 w-7 text-muted" />
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 min-w-0">
+                            {isImage ? (
+                              <ImageIcon className="h-4 w-4 shrink-0 text-cyan-accent" />
+                            ) : (
+                              <FileText className="h-4 w-4 shrink-0 text-muted" />
+                            )}
+                            <span className="truncate text-sm group-hover:text-cyan-accent">
+                              {a.name}
+                            </span>
+                          </div>
+                          {isBrokenMock ? (
+                            <span className="text-[10px] text-amber-500">
+                              Re-upload to preview
+                            </span>
+                          ) : null}
+                        </a>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted mb-4">No attachments yet.</p>
+                )}
                 {/* Drag‑and‑drop area */}
                 <div
                   className={cn(

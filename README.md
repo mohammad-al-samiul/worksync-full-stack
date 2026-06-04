@@ -1,62 +1,63 @@
 # WorkSync
 
-**Smart Project & Task Collaboration System** — premium dashboard UI, role-based APIs, and PostgreSQL persistence via Prisma 7.
+**A simple team app for projects and tasks** — dashboard UI, secure APIs, and PostgreSQL database (Prisma 7).
 
 ---
 
-## Documentation
+## Documentation (pick your language)
 
-| Document | Description |
-|----------|-------------|
-| **[GUIDE.md](./GUIDE.md)** | **Full technical documentation** — system design, functional & non-functional requirements, ER diagram, database design, HLD/LLD (with Mermaid diagrams), features, API reference, Prisma setup |
+| Language | File | Who is it for? |
+|----------|------|----------------|
+| **English** | **[GUIDE.md](./GUIDE.md)** | Full technical guide — setup, features, database, API, diagrams |
+| **বাংলা (Bangla)** | **[GUIDE.bn.md](./GUIDE.bn.md)** | Same guide in Bangla — read this if English is hard for you |
 
-> GitHub/GitLab এ `GUIDE.md` লিংকে ক্লিক করলে টেবিল অফ কনটেন্টসহ সব সেকশন দেখতে পারবেন।
+> **Tip:** Start with this README for a quick setup. Open **GUIDE.md** or **GUIDE.bn.md** when you need details.
 
-**Guide sections (direct links):**
+**English guide — quick links:**
 
-- [Product Overview](./GUIDE.md#1-product-overview)
-- [Functional Requirements](./GUIDE.md#2-functional-requirements)
-- [Non-Functional Requirements](./GUIDE.md#3-non-functional-requirements)
-- [Features](./GUIDE.md#4-features-implemented)
-- [System Design](./GUIDE.md#5-system-design)
-- [High-Level Design (HLD)](./GUIDE.md#6-high-level-design-hld)
-- [Low-Level Design (LLD)](./GUIDE.md#7-low-level-design-lld)
-- [Entity Relationship Diagram](./GUIDE.md#8-entity-relationship-diagram)
-- [Database Design](./GUIDE.md#9-database-design)
-- [API Reference](./GUIDE.md#10-api-reference)
-- [Prisma & PostgreSQL Setup](./GUIDE.md#13-prisma--postgresql-setup)
+- [Product overview](./GUIDE.md#1-product-overview)
+- [What the app must do (requirements)](./GUIDE.md#2-functional-requirements)
+- [Features list](./GUIDE.md#4-features-implemented)
+- [System design](./GUIDE.md#5-system-design)
+- [Database & ER diagram](./GUIDE.md#8-entity-relationship-diagram)
+- [API reference](./GUIDE.md#10-api-reference)
+- [Database setup (Prisma)](./GUIDE.md#13-prisma--postgresql-setup)
 
----
+**বাংলা গাইড:**
 
-## Overview
-
-WorkSync helps teams manage **projects**, **tasks**, **comments**, and **activity logs** through a glassmorphic Next.js console with:
-
-- KPI cards and Recharts analytics (dashboard & analytics pages)
-- Task grid with filters, sorting, pagination / load-more
-- Task detail modal (comments, attachments, status updates)
-- JWT-secured REST API with **Admin / Project Manager / Team Member** RBAC
-- Dark & light themes with Framer Motion micro-interactions
+- **[GUIDE.bn.md — সম্পূর্ণ বাংলা গাইড](./GUIDE.bn.md)** (উপরের সূচিপত্র থেকে সেকশন বেছে নিন)
 
 ---
 
-## Tech Stack
+## What is WorkSync?
 
-| Layer | Technology |
-|-------|------------|
-| Framework | Next.js 16 (App Router) |
+WorkSync helps a team work on **projects**, **tasks**, **comments**, and **activity logs** in one web app:
+
+- Dashboard with charts and KPI cards
+- Task list with search, filters, and “load more”
+- Task detail window (comments, file attachments, status)
+- Login with JWT and three roles: **Admin**, **Project Manager**, **Team Member**
+- Dark and light theme
+
+---
+
+## Tech stack
+
+| Part | Tools |
+|------|--------|
+| App | Next.js 16 (App Router) |
 | UI | React 19, TypeScript, Tailwind CSS v4 |
-| Animation / Charts | Framer Motion, Recharts |
+| Charts / motion | Recharts, Framer Motion |
 | Forms | React Hook Form, Zod |
-| API | Next.js Route Handlers (`src/app/api/`) |
-| Database | PostgreSQL + **Prisma 7** (`@prisma/adapter-pg`, `pg`) |
-| Auth | bcryptjs + JSON Web Tokens |
+| API | Next.js route handlers (`src/app/api/`) |
+| Database | PostgreSQL + Prisma 7 |
+| Login | bcrypt + JSON Web Tokens (JWT) |
 
 ---
 
-## Quick Start
+## Quick start
 
-### 1. Clone and install
+### 1. Get the code and install packages
 
 ```bash
 git clone <your-repo-url>
@@ -64,7 +65,7 @@ cd worksync-full-stack
 npm install
 ```
 
-### 2. Configure environment
+### 2. Set up environment variables
 
 ```bash
 cp .env.example .env
@@ -77,17 +78,17 @@ DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/worksync?schema=publ
 JWT_SECRET="your-long-random-secret"
 ```
 
-### 3. Database setup
+### 3. Prepare the database
 
-Ensure PostgreSQL is running, then:
+Make sure PostgreSQL is running, then:
 
 ```bash
 npm run db:migrate   # apply migrations
-npm run db:seed      # full demo dataset (users, projects, tasks, comments, logs)
-# npm run db:seed:reset   # wipe DB then seed
+npm run db:seed      # add demo users, projects, tasks
+# npm run db:seed:reset   # delete all data, then seed again
 ```
 
-Alternative without migration history:
+Or without migration files:
 
 ```bash
 npm run db:push
@@ -102,7 +103,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Demo logins (after `db:seed`)
+### Demo accounts (after `db:seed`)
 
 | Email | Password |
 |-------|----------|
@@ -110,47 +111,48 @@ Open [http://localhost:3000](http://localhost:3000).
 | `manager@worksync.io` | `manager123` |
 | `member@worksync.io` | `member123` |
 
-Use these with `POST /api/auth/login` or wire the auth UI (see [Guide — Roadmap](./GUIDE.md#15-roadmap--gaps)).
+Use these on the login page or with `POST /api/auth/login`.
 
 ---
 
-## NPM Scripts
+## NPM scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Development server |
-| `npm run build` | `prisma generate` + production build |
-| `npm run start` | Production server |
-| `npm run lint` | ESLint |
-| `npm run db:generate` | Generate Prisma Client |
-| `npm run db:migrate` | Run migrations (dev) |
-| `npm run db:push` | Push schema to DB |
-| `npm run db:seed` | Seed full demo dataset |
-| `npm run db:seed:reset` | Clear tables + seed |
-| `npm run db:studio` | Prisma Studio GUI |
+| Script | What it does |
+|--------|----------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run start` | Run production server |
+| `npm run lint` | Check code style |
+| `npm run db:generate` | Generate Prisma client |
+| `npm run db:migrate` | Run database migrations |
+| `npm run db:push` | Push schema to database |
+| `npm run db:seed` | Add demo data |
+| `npm run db:seed:reset` | Clear tables, then seed |
+| `npm run db:studio` | Open Prisma Studio (DB GUI) |
 
 ---
 
-## Project Structure (summary)
+## Project folders (short)
 
 ```
-src/app/          → pages + API routes
+src/app/          → pages and API routes
 src/components/   → Sidebar, Header, TaskDetailModal, AppLayout
-src/context/      → Auth, Theme
-src/lib/          → prisma, auth, middleware
-prisma/           → schema, migrations, seed
+src/context/      → Auth and theme
+src/lib/          → database, auth, API helpers
+prisma/           → schema, migrations, seed data
+public/uploads/   → task attachment files (local storage)
 ```
 
-Full tree: [GUIDE.md §14](./GUIDE.md#14-project-structure)
+Full tree: [GUIDE.md §14](./GUIDE.md#14-project-structure) · [GUIDE.bn.md](./GUIDE.bn.md) (section 14)
 
 ---
 
-## API (summary)
+## API (short list)
 
-Protected routes require:
+Protected routes need this header:
 
 ```http
-Authorization: Bearer <jwt_from_login>
+Authorization: Bearer <token from login>
 ```
 
 | Endpoint | Methods |
@@ -160,24 +162,24 @@ Authorization: Bearer <jwt_from_login>
 | `/api/projects` | GET, POST |
 | `/api/projects/[id]` | GET, PUT, DELETE |
 | `/api/tasks` | GET, POST |
-| `/api/tasks/[id]` | PATCH |
+| `/api/tasks/[id]` | GET, PATCH |
 | `/api/tasks/[id]/comments` | GET, POST |
 | `/api/tasks/[id]/attachments` | POST |
 | `/api/activity` | GET |
 | `/api/notifications` | GET |
 
-Details: [GUIDE.md §10](./GUIDE.md#10-api-reference)
+More detail: [GUIDE.md §10](./GUIDE.md#10-api-reference) · [GUIDE.bn.md](./GUIDE.bn.md) (section 10)
 
 ---
 
 ## Contributing
 
-1. Fork the repository  
-2. Create a feature branch  
+1. Fork the repo  
+2. Create a branch for your change  
 3. Run `npm run lint`  
 4. Open a pull request  
 
-Architecture and requirements: **[GUIDE.md](./GUIDE.md)**
+Read the full guide: **[GUIDE.md](./GUIDE.md)** (English) or **[GUIDE.bn.md](./GUIDE.bn.md)** (Bangla).
 
 ---
 

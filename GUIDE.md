@@ -1,7 +1,14 @@
-# WorkSync — Project Guide & Technical Documentation
+# WorkSync — Project Guide (English)
 
-> **পুরো সিস্টেম ডিজাইন, রিকোয়ারমেন্ট, ডাটাবেস, HLD/LLD এবং ফিচার লিস্ট এক জায়গায়।**  
-> README থেকে এই ফাইলে লিংক করা আছে — GitHub/GitLab এ ক্লিক করলে নিচের সেকশনগুলো সরাসরি খুলে যাবে।
+> **Everything in one place:** system design, requirements, database, API, and features.  
+> Written in **simple English** so more people can follow it.
+
+| Language | File |
+|----------|------|
+| English (this file) | **GUIDE.md** |
+| বাংলা | **[GUIDE.bn.md](./GUIDE.bn.md)** |
+
+Also see: [README.md](./README.md) for quick setup.
 
 ---
 
@@ -44,8 +51,8 @@
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| FR-A1 | User can register with name, email, password | API ✅ / UI uses demo flow ⚠️ |
-| FR-A2 | User can log in; server returns JWT | API ✅ |
+| FR-A1 | User can register with name, email, password | API ✅ / UI ✅ |
+| FR-A2 | User can log in; server returns JWT | API ✅ / UI ✅ |
 | FR-A3 | Passwords stored as bcrypt hash | ✅ |
 | FR-A4 | Roles: `ADMIN`, `PROJECT_MANAGER`, `TEAM_MEMBER` | ✅ |
 | FR-A5 | Login/register events written to activity log | ✅ |
@@ -71,7 +78,7 @@
 | FR-T4 | Duplicate title per project rejected (409) | ✅ |
 | FR-T5 | Past deadline rejected on create | ✅ |
 | FR-T6 | Completed tasks cannot be reassigned | ✅ |
-| FR-T7 | Task detail modal: comments, attachments UI | UI ✅ / API partial |
+| FR-T7 | Task detail modal: comments, attachments | UI ✅ / API ✅ (files in `public/uploads`) |
 
 ### 2.4 Collaboration & Audit
 
@@ -303,23 +310,24 @@ OR: [
 ]
 ```
 
-### 7.5 Frontend auth flow (current)
+### 7.5 Frontend auth flow
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant AuthPage as /auth
+    participant API as POST /api/auth/login
     participant Ctx as AuthContext
     participant LS as localStorage
 
-    U->>AuthPage: submit email + demo role
-    AuthPage->>Ctx: login(email, role)
-    Ctx->>LS: persist mock user profile
+    U->>AuthPage: email + password
+    AuthPage->>API: login request
+    API-->>AuthPage: JWT + user
+    AuthPage->>Ctx: save token and user
+    Ctx->>LS: token + user profile
     Ctx->>U: redirect /dashboard
-    Note over AuthPage,Ctx: Production path: POST /api/auth/login → store JWT
+    Note over Ctx: apiFetch() sends Bearer token on API calls
 ```
-
-> **Note:** API login/register are production-ready; `AuthContext` still uses a demo localStorage flow. Wire the UI to `/api/auth/login` to complete end-to-end auth.
 
 ---
 
@@ -633,9 +641,11 @@ worksync-full-stack/
 │   ├── components/            # Sidebar, Header, Modal, Layout
 │   ├── context/               # Auth, Theme
 │   └── lib/                   # prisma, auth, middleware, utils
+├── public/uploads/tasks/      # Uploaded attachment files
 ├── .env.example
-├── GUIDE.md                   # ← You are here
-└── README.md                  # Quick start + link to this guide
+├── GUIDE.md                   # This file (English)
+├── GUIDE.bn.md                # Same guide in Bangla
+└── README.md                  # Quick start
 ```
 
 ---
@@ -644,18 +654,17 @@ worksync-full-stack/
 
 | Item | Priority | Notes |
 |------|----------|-------|
-| Connect `AuthContext` to `/api/auth/login` | High | Store JWT in localStorage/session |
-| Send `Authorization` header from task pages | High | Tasks fetch currently unauthenticated |
 | Real notifications from `ActivityLog` | Medium | Replace header mock array |
-| File upload to S3/Cloudinary | Medium | Attachments store URL only |
-| WebSocket real-time updates | Low | Optional enhancement |
-| E2E tests (Playwright) | Low | API + critical flows |
+| Cloud storage for attachments (S3, etc.) | Medium | Today: local `public/uploads` |
+| WebSocket real-time updates | Low | Optional |
+| E2E tests (Playwright) | Low | API + main user flows |
 
 ---
 
 ## Quick links
 
 - [README — Getting Started](README.md)
+- [Guide in Bangla (GUIDE.bn.md)](./GUIDE.bn.md)
 - [Prisma Schema](prisma/schema.prisma)
 - [Environment template](.env.example)
 
