@@ -13,6 +13,9 @@ import {
   Calendar,
   Users,
 } from "lucide-react";
+import { SubmitButton } from "@/components/SubmitButton";
+import { ActionOverlay } from "@/components/ActionOverlay";
+import { StyledSelect } from "@/components/StyledSelect";
 import { cn } from "@/lib/utils";
 import { apiFetch, parseJson, type PaginatedResponse } from "@/lib/api";
 
@@ -47,6 +50,7 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState("");
@@ -88,6 +92,7 @@ export default function ProjectsPage() {
   }, [fetchProjects]);
 
   const onSubmit = async (data: ProjectFormValues) => {
+    setIsCreating(true);
     try {
       const res = await apiFetch("/api/projects", {
         method: "POST",
@@ -96,13 +101,16 @@ export default function ProjectsPage() {
       if (res.ok) {
         setIsModalOpen(false);
         reset();
-        fetchProjects();
+        await fetchProjects();
       } else {
         const err = await res.json();
         alert(err.error);
       }
     } catch (error) {
       console.error(error);
+      alert("Could not create project. Check your connection and try again.");
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -174,28 +182,24 @@ export default function ProjectsPage() {
         </div>
 
         <div className="flex items-center gap-3 w-full lg:w-auto">
-          <div className="flex items-center gap-2 bg-slate-900/50 border border-card-border rounded-xl px-3 py-2">
-            <Filter className="h-4 w-4 text-muted" />
-            <select
+          <div className="flex items-center gap-2 rounded-xl border border-card-border bg-slate-900/50 px-3 py-2">
+            <Filter className="h-4 w-4 shrink-0 text-muted" />
+            <StyledSelect
+              variant="inline"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-transparent text-sm focus:outline-none"
             >
               <option value="ALL">All Status</option>
               <option value="ACTIVE">Active</option>
               <option value="COMPLETED">Completed</option>
               <option value="ON_HOLD">On Hold</option>
-            </select>
+            </StyledSelect>
           </div>
 
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="bg-slate-900/50 border border-card-border rounded-xl px-3 py-2 text-sm focus:outline-none"
-          >
+          <StyledSelect value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
             <option value="LATEST">Latest Created</option>
             <option value="DEADLINE">Nearest Deadline</option>
-          </select>
+          </StyledSelect>
         </div>
       </div>
 
@@ -266,12 +270,16 @@ export default function ProjectsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-900 border border-card-border rounded-2xl p-6 w-full max-w-md shadow-2xl"
+            className="relative bg-slate-900 border border-card-border rounded-2xl p-6 w-full max-w-md shadow-2xl"
           >
+            <ActionOverlay show={isCreating} label="Creating project..." />
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Plus className="text-purple-accent" /> Create New Project
             </h2>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className={cn("space-y-4", isCreating && "pointer-events-none opacity-80")}
+            >
               <div>
                 <label className="text-xs font-semibold text-muted uppercase">
                   Project Name
@@ -304,7 +312,7 @@ export default function ProjectsPage() {
                 <input
                   type="date"
                   {...register("deadline")}
-                  className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-purple-accent focus:outline-none text-slate-200"
+                  className="cyber-input w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-purple-accent focus:outline-none text-slate-200"
                 />
                 {errors.deadline && (
                   <p className="text-rose-500 text-xs mt-1">
@@ -314,22 +322,26 @@ export default function ProjectsPage() {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button
+                <SubmitButton
                   type="button"
+                  variant="ghost"
+                  disabled={isCreating}
                   onClick={() => {
                     setIsModalOpen(false);
                     reset();
                   }}
-                  className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-semibold transition-colors"
+                  className="flex-1 px-4 py-2 text-sm"
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-purple-accent hover:bg-purple-accent/80 text-white rounded-xl text-sm font-semibold transition-colors"
+                </SubmitButton>
+                <SubmitButton
+                  isLoading={isCreating}
+                  loadingText="Creating project..."
+                  variant="purple"
+                  className="flex-1 px-4 py-2 text-sm"
                 >
                   Create
-                </button>
+                </SubmitButton>
               </div>
             </form>
           </motion.div>

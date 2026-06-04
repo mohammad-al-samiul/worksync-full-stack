@@ -5,11 +5,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { 
-  CheckSquare, Search, Filter, Plus, Calendar, 
-  Flag, AlertCircle, Clock, CheckCircle2 
+import {
+  CheckSquare,
+  Search,
+  Plus,
+  Calendar,
+  Flag,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import TaskDetailModal from "@/components/TaskDetailModal";
+import { SubmitButton } from "@/components/SubmitButton";
+import { ActionOverlay } from "@/components/ActionOverlay";
+import { StyledSelect } from "@/components/StyledSelect";
 import { cn } from "@/lib/utils";
 import { apiFetch, parseJson, type PaginatedResponse } from "@/lib/api";
 
@@ -33,6 +41,9 @@ export default function TasksPage() {
   const [projects, setProjects] = useState<any[]>([]); // For the modal dropdown
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState("");
@@ -75,8 +86,13 @@ export default function TasksPage() {
   };
 
   // Load more button handler
-  const loadMore = () => {
-    fetchTasks(page);
+  const loadMore = async () => {
+    setIsLoadingMore(true);
+    try {
+      await fetchTasks(page);
+    } finally {
+      setIsLoadingMore(false);
+    }
   };
 
   const fetchProjects = async () => {
@@ -97,8 +113,8 @@ export default function TasksPage() {
   }, []);
 
   const onSubmit = async (data: TaskFormValues) => {
+    setIsCreating(true);
     try {
-      // Clean up empty email string to undefined
       const payload = { ...data };
       if (!payload.assignedToEmail) delete payload.assignedToEmail;
 
@@ -109,30 +125,38 @@ export default function TasksPage() {
       if (res.ok) {
         setIsModalOpen(false);
         reset();
-        fetchTasks();
-      } else {
-        const err = await res.json();
-        alert(err.error); // Show strict backend error
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const updateTaskStatus = async (id: string, newStatus: string) => {
-    try {
-      const res = await apiFetch(`/api/tasks/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) {
-        fetchTasks();
+        await fetchTasks();
       } else {
         const err = await res.json();
         alert(err.error);
       }
     } catch (error) {
       console.error(error);
+      alert("Could not create task. Check your connection and try again.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const updateTaskStatus = async (id: string, newStatus: string) => {
+    setUpdatingStatusId(id);
+    try {
+      const res = await apiFetch(`/api/tasks/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        setTasks((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
+        );
+      } else {
+        const err = await res.json();
+        alert(err.error);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setUpdatingStatusId(null);
     }
   };
 
@@ -203,47 +227,44 @@ export default function TasksPage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
-          <select 
-            value={statusFilter} 
+          <StyledSelect
+            value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-900/50 border border-card-border rounded-xl px-3 py-2 text-sm focus:outline-none"
           >
             <option value="ALL">All Status</option>
             <option value="TODO">To Do</option>
             <option value="IN_PROGRESS">In Progress</option>
             <option value="COMPLETED">Completed</option>
-          </select>
-          
-          <select 
-            value={priorityFilter} 
+          </StyledSelect>
+
+          <StyledSelect
+            value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="bg-slate-900/50 border border-card-border rounded-xl px-3 py-2 text-sm focus:outline-none"
           >
             <option value="ALL">All Priorities</option>
             <option value="HIGH">High</option>
             <option value="MEDIUM">Medium</option>
             <option value="LOW">Low</option>
-          </select>
+          </StyledSelect>
 
-          <select 
-            value={deadlineFilter} 
+          <StyledSelect
+            value={deadlineFilter}
             onChange={(e) => setDeadlineFilter(e.target.value)}
-            className="bg-slate-900/50 border border-card-border rounded-xl px-3 py-2 text-sm focus:outline-none"
           >
             <option value="ALL">All Dates</option>
             <option value="UPCOMING">Upcoming</option>
             <option value="OVERDUE">Overdue</option>
-          </select>
+          </StyledSelect>
 
-          <select 
-            value={sortBy} 
+          <StyledSelect
+            value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-slate-900/50 border border-card-border rounded-xl px-3 py-2 text-sm focus:outline-none text-cyan-accent"
+            className="text-cyan-accent"
           >
             <option value="DEADLINE">Nearest Deadline</option>
             <option value="PRIORITY">Highest Priority</option>
             <option value="LATEST">Latest Created</option>
-          </select>
+          </StyledSelect>
         </div>
       </div>
 
@@ -282,22 +303,34 @@ export default function TasksPage() {
                 >
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="font-bold text-base leading-tight truncate pr-4" title={task.title}>{task.title}</h3>
-                    {/* Inline Status Update Dropdown */}
-                    <select 
+                    <div
+                      className="relative shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {updatingStatusId === task.id && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-slate-900/90">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-accent" />
+                        </div>
+                      )}
+                      <StyledSelect
+                        variant="status"
                         value={task.status}
-                        onClick={(e) => e.stopPropagation()}
+                        disabled={updatingStatusId === task.id}
                         onChange={(e) => updateTaskStatus(task.id, e.target.value)}
                         className={cn(
-                            "text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider focus:outline-none bg-slate-900 border appearance-none cursor-pointer",
-                            task.status === "COMPLETED" ? "text-emerald-accent border-emerald-accent/30" :
-                            task.status === "IN_PROGRESS" ? "text-cyan-accent border-cyan-accent/30" :
-                            "text-slate-400 border-slate-700"
+                          task.status === "COMPLETED"
+                            ? "text-emerald-accent border-emerald-accent/30"
+                            : task.status === "IN_PROGRESS"
+                              ? "text-cyan-accent border-cyan-accent/30"
+                              : "text-slate-400 border-slate-700",
+                          updatingStatusId === task.id && "opacity-40"
                         )}
-                    >
+                      >
                         <option value="TODO">To Do</option>
                         <option value="IN_PROGRESS">In Progress</option>
                         <option value="COMPLETED">Completed</option>
-                    </select>
+                      </StyledSelect>
+                    </div>
                   </div>
                   
                   <p className="text-xs text-slate-400 mb-4 line-clamp-2 min-h-[32px]">
@@ -327,12 +360,16 @@ export default function TasksPage() {
         </motion.div>
       )}
       {page < totalPages && (
-        <button
+        <SubmitButton
+          type="button"
           onClick={loadMore}
-          className="mt-4 w-full py-2 bg-cyan-accent text-slate-950 rounded-xl hover:bg-cyan-accent/80 transition"
+          isLoading={isLoadingMore}
+          loadingText="Loading tasks..."
+          variant="cyan"
+          className="mt-4 w-full py-2.5 text-sm"
         >
           Load More
-        </button>
+        </SubmitButton>
       )}
       {taskModalOpen && (
         <TaskDetailModal
@@ -345,15 +382,19 @@ export default function TasksPage() {
       {/* Create Task Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-slate-900 border border-card-border rounded-2xl p-6 w-full max-w-lg shadow-2xl"
+            className="relative bg-slate-900 border border-card-border rounded-2xl p-6 w-full max-w-lg shadow-2xl"
           >
+            <ActionOverlay show={isCreating} label="Creating task..." />
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Plus className="text-cyan-accent" /> Create New Task
             </h2>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className={cn("space-y-4", isCreating && "pointer-events-none opacity-80")}
+            >
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
@@ -367,38 +408,34 @@ export default function TasksPage() {
                   
                   <div className="md:col-span-2">
                     <label className="text-xs font-semibold text-muted uppercase">Project</label>
-                    <select 
-                      {...register("projectId")}
-                      className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-cyan-accent focus:outline-none"
-                    >
-                        <option value="">Select a project...</option>
-                        {projects.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                    </select>
+                    <StyledSelect variant="form" {...register("projectId")} className="mt-1">
+                      <option value="">Select a project...</option>
+                      {projects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </StyledSelect>
                     {errors.projectId && <p className="text-rose-500 text-[10px] mt-1">{errors.projectId.message}</p>}
                   </div>
 
                   <div>
                     <label className="text-xs font-semibold text-muted uppercase">Due Date</label>
-                    <input 
+                    <input
                       type="date"
                       {...register("dueDate")}
-                      className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-cyan-accent focus:outline-none text-slate-200"
+                      className="cyber-input w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-cyan-accent focus:outline-none text-slate-200"
                     />
                     {errors.dueDate && <p className="text-rose-500 text-[10px] mt-1">{errors.dueDate.message}</p>}
                   </div>
 
                   <div>
                     <label className="text-xs font-semibold text-muted uppercase">Priority</label>
-                    <select 
-                      {...register("priority")}
-                      className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-cyan-accent focus:outline-none"
-                    >
-                        <option value="LOW">Low</option>
-                        <option value="MEDIUM">Medium</option>
-                        <option value="HIGH">High</option>
-                    </select>
+                    <StyledSelect variant="form" {...register("priority")} className="mt-1">
+                      <option value="LOW">Low</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HIGH">High</option>
+                    </StyledSelect>
                   </div>
                   
                   <div className="md:col-span-2">
@@ -414,19 +451,26 @@ export default function TasksPage() {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button 
-                  type="button" 
-                  onClick={() => { setIsModalOpen(false); reset(); }}
-                  className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-semibold transition-colors"
+                <SubmitButton
+                  type="button"
+                  variant="ghost"
+                  disabled={isCreating}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    reset();
+                  }}
+                  className="flex-1 px-4 py-2 text-sm"
                 >
                   Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-cyan-accent hover:bg-cyan-accent/80 text-slate-950 rounded-xl text-sm font-semibold transition-colors"
+                </SubmitButton>
+                <SubmitButton
+                  isLoading={isCreating}
+                  loadingText="Creating task..."
+                  variant="cyan"
+                  className="flex-1 px-4 py-2 text-sm"
                 >
                   Create Task
-                </button>
+                </SubmitButton>
               </div>
             </form>
           </motion.div>

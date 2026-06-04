@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Upload, Image as ImageIcon, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
+import { SubmitButton } from "@/components/SubmitButton";
 import { isImageAttachment } from "@/lib/attachment-utils";
 
 // Types
@@ -32,6 +33,7 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
   const [loading, setLoading] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [uploadState, setUploadState] = useState<"idle" | "uploading" | "done">("idle");
+  const [isPostingComment, setIsPostingComment] = useState(false);
   const [previewFiles, setPreviewFiles] = useState<File[]>([]);
 
   const fetchTask = useCallback(async (showLoading = true) => {
@@ -58,7 +60,8 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
   // Post new comment
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim() || !taskId) return;
+    if (!newComment.trim() || !taskId || isPostingComment) return;
+    setIsPostingComment(true);
     try {
       const res = await apiFetch(`/api/tasks/${taskId}/comments?taskId=${taskId}`, {
         method: "POST",
@@ -66,11 +69,15 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
       });
       if (res.ok) {
         const comment = await res.json();
-        setTask((prev) => prev && { ...prev, comments: [...(prev.comments || []), comment] });
+        setTask((prev) =>
+          prev ? { ...prev, comments: [...(prev.comments || []), comment] } : prev
+        );
         setNewComment("");
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setIsPostingComment(false);
     }
   };
 
@@ -204,15 +211,18 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Add a comment..."
-                    className="flex-1 bg-slate-900/30 border border-card-border rounded-xl p-2 text-sm focus:outline-none focus:border-cyan-accent"
+                    disabled={isPostingComment}
+                    className="flex-1 bg-slate-900/30 border border-card-border rounded-xl p-2 text-sm focus:outline-none focus:border-cyan-accent disabled:opacity-60"
                     rows={2}
                   />
-                  <button
-                    type="submit"
-                    className="px-3 py-1 bg-cyan-accent text-white rounded-lg hover:bg-cyan-accent/80 transition"
+                  <SubmitButton
+                    isLoading={isPostingComment}
+                    loadingText="Posting..."
+                    variant="cyan"
+                    className="px-3 py-2 text-xs shrink-0 self-end"
                   >
                     Post
-                  </button>
+                  </SubmitButton>
                 </form>
               </section>
 

@@ -171,3 +171,33 @@ body {
 .animate-pulse-glow {
   animation: pulseGlow 4s infinite ease-in-out;
 }
+
+/* Native selects — dark dropdown list (fixes white/blue OS default popup) */
+.cyber-select {
+  color-scheme: dark;
+}
+
+.cyber-select option {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+
+.cyber-select option:checked,
+.cyber-select option:hover {
+  background-color: #1e293b;
+  color: var(--cyan-accent);
+}
+
+.dark .cyber-select {
+  color-scheme: dark;
+}
+
+/* Date inputs — match dark forms */
+input[type="date"].cyber-input,
+input[type="date"] {
+  color-scheme: dark;
+}
+
+.dark input[type="date"] {
+  color-scheme: dark;
+}

@@ -13,6 +13,7 @@ import {
   Activity,
   Zap,
 } from "lucide-react";
+import { SubmitButton } from "@/components/SubmitButton";
 import { cn } from "@/lib/utils";
 
 const DEMO_CREDENTIALS: Record<UserRole, { email: string; password: string }> = {
@@ -230,14 +231,15 @@ export default function AuthPage() {
             </div>
 
             {/* Form Button */}
-            <button
-              type="submit"
-              disabled={isAutofilling || isSubmitting}
-              className="w-full h-11 mt-2 bg-gradient-to-r from-cyan-accent to-purple-accent hover:from-cyan-accent hover:to-purple-accent text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_20px_rgba(0,242,254,0.25)] hover:shadow-[0_4px_25px_rgba(157,78,221,0.4)] active:scale-98 transition-all duration-300 disabled:opacity-50"
+            <SubmitButton
+              isLoading={isSubmitting}
+              loadingText={isLogin ? "Signing in..." : "Creating account..."}
+              variant="gradient"
+              className="w-full h-11 mt-2 text-xs uppercase tracking-wider"
             >
-              <span>{isLogin ? "Decrypt Console" : "Initialize Key"}</span>
-              <ArrowRight className="h-4.5 w-4.5" />
-            </button>
+              {isLogin ? "Decrypt Console" : "Initialize Key"}
+              {!isSubmitting && <ArrowRight className="h-4.5 w-4.5" />}
+            </SubmitButton>
           </form>
 
           {/* Divider */}

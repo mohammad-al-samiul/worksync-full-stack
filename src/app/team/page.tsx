@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { Users, Mail, UserPlus, Shield, MessageSquare, Search, Award } from "lucide-react";
 import { motion } from "framer-motion";
+import { SubmitButton } from "@/components/SubmitButton";
+import { StyledSelect } from "@/components/StyledSelect";
 import { cn } from "@/lib/utils";
 import { apiFetch, parseJson } from "@/lib/api";
 import { apiRoleToDisplay, displayRoleToApi } from "@/lib/roles";
@@ -27,6 +29,7 @@ export default function TeamPage() {
 
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isInviting, setIsInviting] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -75,8 +78,10 @@ export default function TeamPage() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail.trim()) return;
+    if (!inviteEmail.trim() || isInviting) return;
 
+    setIsInviting(true);
+    setInviteSuccess("");
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -121,9 +126,10 @@ export default function TeamPage() {
       }
     } catch {
       setInviteSuccess("Invite failed. Check network.");
+    } finally {
+      setIsInviting(false);
+      setTimeout(() => setInviteSuccess(""), 5000);
     }
-
-    setTimeout(() => setInviteSuccess(""), 5000);
   };
 
   const getStatusColor = (status: string) => {
@@ -179,7 +185,10 @@ export default function TeamPage() {
               {inviteSuccess}
             </div>
           )}
-          <form onSubmit={handleInvite} className="space-y-4">
+          <form
+            onSubmit={handleInvite}
+            className={cn("space-y-4 relative", isInviting && "opacity-80")}
+          >
             <div className="space-y-1.5">
               <label className="text-[10px] uppercase tracking-wider text-muted font-bold">Email Address</label>
               <input
@@ -188,29 +197,36 @@ export default function TeamPage() {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="developer@worksync.io"
-                className="w-full h-10 px-3 bg-slate-950/40 rounded-lg border border-card-border/60 text-xs focus:outline-none focus:border-cyan-accent transition-all placeholder:text-muted"
+                disabled={isInviting}
+                className="w-full h-10 px-3 bg-slate-950/40 rounded-lg border border-card-border/60 text-xs focus:outline-none focus:border-cyan-accent transition-all placeholder:text-muted disabled:opacity-60"
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-[10px] uppercase tracking-wider text-muted font-bold">Role Access</label>
-              <select
+              <StyledSelect
+                variant="form"
                 value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value as any)}
-                className="w-full h-10 px-2 bg-slate-950/60 rounded-lg border border-card-border/60 text-xs focus:outline-none focus:border-cyan-accent text-foreground"
+                disabled={isInviting}
+                onChange={(e) =>
+                  setInviteRole(e.target.value as "Admin" | "Manager" | "Member")
+                }
+                className="h-10 rounded-lg border-card-border/60 bg-slate-950/60 text-xs"
               >
                 <option value="Member">Member (Limited)</option>
                 <option value="Manager">Manager (Moderator)</option>
                 <option value="Admin">Admin (Full Access)</option>
-              </select>
+              </StyledSelect>
             </div>
 
-            <button
-              type="submit"
-              className="w-full h-10 bg-gradient-to-r from-cyan-accent to-purple-accent text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-cyan-accent/15"
+            <SubmitButton
+              isLoading={isInviting}
+              loadingText="Sending invite..."
+              variant="gradient"
+              className="w-full h-10 text-xs uppercase tracking-wider"
             >
-              <span>Dispatch Invite</span>
-            </button>
+              Dispatch Invite
+            </SubmitButton>
           </form>
         </div>
 
