@@ -2,10 +2,13 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { setStoredToken, getStoredToken } from "@/lib/api";
+import { apiRoleToDisplay, displayRoleToApi, type DisplayRole } from "@/lib/roles";
 
-export type UserRole = "Admin" | "Manager" | "Member";
+export type UserRole = DisplayRole;
 
 export interface User {
+  id: string;
   name: string;
   email: string;
   role: UserRole;
@@ -16,23 +19,30 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, role: UserRole) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string, role: UserRole) => Promise<boolean>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ROLE_NAMES: Record<UserRole, string> = {
-  Admin: "Alex Rivers",
-  Manager: "Sarah Connor",
-  Member: "Marcus Wright",
-};
-
-const ROLE_AVATARS: Record<UserRole, string> = {
-  Admin: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-  Manager: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
-  Member: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
-};
+function mapApiUser(raw: {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  avatar?: string | null;
+}): User {
+  return {
+    id: raw.id,
+    name: raw.name,
+    email: raw.email,
+    role: apiRoleToDisplay(raw.role),
+    avatar:
+      raw.avatar ||
+      `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(raw.name)}`,
+  };
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -41,39 +51,96 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    const token = getStoredToken();
+    if (savedUser && token) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch {
+        localStorage.removeItem("user");
+        setStoredToken(null);
+      }
     }
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, role: UserRole): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return false;
+      }
+      setStoredToken(data.token);
+      const loggedInUser = mapApiUser(data.user);
+      setUser(loggedInUser);
+      localStorage.setItem("user", JSON.stringify(loggedInUser));
+      router.push("/dashboard");
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const loggedInUser: User = {
-      name: ROLE_NAMES[role],
-      email: email,
-      role: role,
-      avatar: ROLE_AVATARS[role],
-    };
-
-    setUser(loggedInUser);
-    localStorage.setItem("user", JSON.stringify(loggedInUser));
-    setIsLoading(false);
-    router.push("/dashboard");
-    return true;
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    role: UserRole
+  ): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          role: displayRoleToApi(role),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return false;
+      }
+      setStoredToken(data.token);
+      const loggedInUser = mapApiUser(data.user);
+      setUser(loggedInUser);
+      localStorage.setItem("user", JSON.stringify(loggedInUser));
+      router.push("/dashboard");
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem("user");
+    setStoredToken(null);
     router.push("/auth");
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        register,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

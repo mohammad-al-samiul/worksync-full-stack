@@ -1,27 +1,23 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { withAuth } from '@/lib/middleware';
-import type { AuthenticatedRequest } from '@/lib/middleware';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/middleware";
 
-export const GET = withAuth(async (request: AuthenticatedRequest) => {
+/**
+ * GET /api/notifications
+ * Recent activity logs as notification feed.
+ */
+export const GET = withAuth(async () => {
   try {
-    const { userId, role } = request.user;
-    // Fetch activity logs relevant to the user
     const logs = await prisma.activityLog.findMany({
-      where: {
-        OR: [
-          // Assigned task notifications (Team Members)
-          { actionDescription: { contains: userId, mode: 'insensitive' } },
-          // Completed task notifications (Managers)
-          { actionDescription: { contains: 'COMPLETED', mode: 'insensitive' } },
-        ],
+      orderBy: { timestamp: "desc" },
+      take: 25,
+      include: {
+        user: { select: { name: true, avatar: true } },
       },
-      orderBy: { timestamp: 'desc' },
-      take: 20,
     });
     return NextResponse.json(logs);
   } catch (error) {
-    console.error('GET Notifications Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 });
+    console.error("GET Notifications Error:", error);
+    return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 });
   }
 });

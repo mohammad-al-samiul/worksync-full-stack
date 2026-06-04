@@ -26,6 +26,7 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import { apiFetch, parseJson, type PaginatedResponse } from "@/lib/api";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -36,67 +37,134 @@ export default function DashboardPage() {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fallback / Mock Data
-  const mockTaskDistribution = [
-    { name: "To Do", value: 12, color: "#94a3b8" }, // slate-400
-    { name: "In Progress", value: 18, color: "#00f2fe" }, // cyan-accent
-    { name: "Completed", value: 24, color: "#10b981" }, // emerald-accent
-  ];
-
-  const mockProgressTrend = [
-    { name: "Mon", tasks: 4 },
-    { name: "Tue", tasks: 7 },
-    { name: "Wed", tasks: 5 },
-    { name: "Thu", tasks: 12 },
-    { name: "Fri", tasks: 18 },
-    { name: "Sat", tasks: 14 },
-    { name: "Sun", tasks: 20 },
-  ];
-
-  const mockWorkload = [
-    { name: "Alex", total: 15, completed: 10 },
-    { name: "Sarah", total: 12, completed: 8 },
-    { name: "Marcus", total: 8, completed: 7 },
-    { name: "Kyle", total: 20, completed: 5 },
-  ];
-
-  const mockActivities = [
-    { id: 1, text: "Task 'Setup API' assigned to John", time: "10:15 AM", type: "assignment" },
-    { id: 2, text: "Project 'Cyber UI' marked as ACTIVE", time: "09:30 AM", type: "status" },
-    { id: 3, text: "Sarah completed 'Database Schema'", time: "Yesterday", type: "completion" },
-    { id: 4, text: "Overdue alert: 'Auth Middleware'", time: "Yesterday", type: "alert" },
-    { id: 5, text: "Alex commented on 'Redis Cache'", time: "2 days ago", type: "comment" },
-  ];
-
-  const mockUpcomingTasks = [
-    { id: 1, title: "Finalize GraphQL Types", deadline: "Today, 5:00 PM", priority: "HIGH" },
-    { id: 2, title: "Review Pull Request #42", deadline: "Tomorrow", priority: "MEDIUM" },
-    { id: 3, title: "Deploy Staging Environment", deadline: "Friday", priority: "HIGH" },
-  ];
+  const [taskDistribution, setTaskDistribution] = useState([
+    { name: "To Do", value: 0, color: "#94a3b8" },
+    { name: "In Progress", value: 0, color: "#00f2fe" },
+    { name: "Completed", value: 0, color: "#10b981" },
+  ]);
+  const [progressTrend, setProgressTrend] = useState<{ name: string; tasks: number }[]>([]);
+  const [workload, setWorkload] = useState<{ name: string; total: number; completed: number }[]>([]);
+  const [recentActivities, setRecentActivities] = useState<
+    { id: string; text: string; time: string; type: string }[]
+  >([]);
+  const [upcomingTasks, setUpcomingTasks] = useState<
+    { id: string; title: string; deadline: string; priority: string }[]
+  >([]);
+  const [kpi, setKpi] = useState({
+    projects: 0,
+    tasks: 0,
+    completed: 0,
+    pending: 0,
+    overdue: 0,
+  });
 
   useEffect(() => {
-    // In a real app, we would fetch from our /api endpoints here.
-    // For now, we simulate a loading state and then use the mock data if no db data exists.
     const fetchData = async () => {
       try {
         setLoading(true);
-        // const [projRes, taskRes, actRes] = await Promise.all([
-        //   fetch("/api/projects"),
-        //   fetch("/api/tasks"),
-        //   fetch("/api/activity")
-        // ]);
-        // ... (data mapping logic would go here)
-        
-        // Simulating network delay
-        setTimeout(() => {
-          setLoading(false);
-        }, 800);
+        const [projRes, taskRes, actRes] = await Promise.all([
+          apiFetch("/api/projects?limit=100"),
+          apiFetch("/api/tasks?limit=100"),
+          apiFetch("/api/activity"),
+        ]);
+
+        const projData = projRes.ok
+          ? await parseJson<PaginatedResponse<any>>(projRes)
+          : null;
+        const taskData = taskRes.ok
+          ? await parseJson<PaginatedResponse<any>>(taskRes)
+          : null;
+        const actData = actRes.ok ? await parseJson<any[]>(actRes) : null;
+
+        const projectList = projData?.data ?? [];
+        const taskList = taskData?.data ?? [];
+
+        setProjects(projectList);
+        setTasks(taskList);
+        if (actData) setActivities(actData);
+
+        const now = new Date();
+        const todo = taskList.filter((t) => t.status === "TODO").length;
+        const inProg = taskList.filter((t) => t.status === "IN_PROGRESS").length;
+        const done = taskList.filter((t) => t.status === "COMPLETED").length;
+        const overdue = taskList.filter(
+          (t) => t.dueDate && new Date(t.dueDate) < now && t.status !== "COMPLETED"
+        ).length;
+
+        setKpi({
+          projects: projectList.length,
+          tasks: taskList.length,
+          completed: done,
+          pending: todo + inProg,
+          overdue,
+        });
+
+        setTaskDistribution([
+          { name: "To Do", value: todo, color: "#94a3b8" },
+          { name: "In Progress", value: inProg, color: "#00f2fe" },
+          { name: "Completed", value: done, color: "#10b981" },
+        ]);
+
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        setProgressTrend(
+          days.map((name, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (6 - i));
+            const count = taskList.filter(
+              (t) => new Date(t.createdAt).toDateString() === d.toDateString()
+            ).length;
+            return { name, tasks: count };
+          })
+        );
+
+        const loadMap = new Map<string, { total: number; completed: number }>();
+        for (const t of taskList) {
+          const name = t.assignedTo?.name?.split(" ")[0] || "Unassigned";
+          const cur = loadMap.get(name) || { total: 0, completed: 0 };
+          cur.total += 1;
+          if (t.status === "COMPLETED") cur.completed += 1;
+          loadMap.set(name, cur);
+        }
+        setWorkload(
+          Array.from(loadMap.entries())
+            .map(([name, v]) => ({ name, ...v }))
+            .slice(0, 6)
+        );
+
+        if (actData?.length) {
+          setRecentActivities(
+            actData.slice(0, 5).map((a) => ({
+              id: a.id,
+              text: a.actionDescription,
+              time: new Date(a.timestamp).toLocaleString(),
+              type: a.actionDescription.toLowerCase().includes("overdue")
+                ? "alert"
+                : a.actionDescription.toLowerCase().includes("completed")
+                  ? "completion"
+                  : "assignment",
+            }))
+          );
+        }
+
+        setUpcomingTasks(
+          taskList
+            .filter((t) => t.dueDate && t.status !== "COMPLETED")
+            .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+            .slice(0, 3)
+            .map((t) => ({
+              id: t.id,
+              title: t.title,
+              deadline: new Date(t.dueDate).toLocaleDateString(),
+              priority: t.priority,
+            }))
+        );
       } catch (error) {
         console.error("Error fetching data:", error);
+      } finally {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, []);
 
@@ -143,28 +211,28 @@ export default function DashboardPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
-          { title: "Total Projects", value: "14", icon: FolderKanban, color: "text-purple-accent", bg: "bg-purple-accent/10" },
-          { title: "Total Tasks", value: "156", icon: Activity, color: "text-cyan-accent", bg: "bg-cyan-accent/10" },
-          { title: "Completed", value: "84", icon: CheckCircle2, color: "text-emerald-accent", bg: "bg-emerald-accent/10" },
-          { title: "Pending", value: "62", icon: Clock, color: "text-slate-400", bg: "bg-slate-400/10" },
-          { title: "Overdue", value: "10", icon: AlertCircle, color: "text-rose-500", bg: "bg-rose-500/10", glow: true },
-        ].map((kpi, index) => (
+          { title: "Total Projects", value: String(kpi.projects), icon: FolderKanban, color: "text-purple-accent", bg: "bg-purple-accent/10" },
+          { title: "Total Tasks", value: String(kpi.tasks), icon: Activity, color: "text-cyan-accent", bg: "bg-cyan-accent/10" },
+          { title: "Completed", value: String(kpi.completed), icon: CheckCircle2, color: "text-emerald-accent", bg: "bg-emerald-accent/10" },
+          { title: "Pending", value: String(kpi.pending), icon: Clock, color: "text-slate-400", bg: "bg-slate-400/10" },
+          { title: "Overdue", value: String(kpi.overdue), icon: AlertCircle, color: "text-rose-500", bg: "bg-rose-500/10", glow: kpi.overdue > 0 },
+        ].map((kpiCard, index) => (
           <motion.div
             key={index}
             variants={itemVariants}
             className={cn(
               "relative overflow-hidden rounded-2xl border bg-card/45 glassmorphism p-5 transition-all hover:bg-card/60",
-              kpi.glow ? "border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.15)] animate-pulse-slow" : "border-card-border"
+              kpiCard.glow ? "border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.15)] animate-pulse-slow" : "border-card-border"
             )}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider">{kpi.title}</span>
-              <div className={cn("p-2 rounded-lg", kpi.bg)}>
-                <kpi.icon className={cn("h-4 w-4", kpi.color)} />
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">{kpiCard.title}</span>
+              <div className={cn("p-2 rounded-lg", kpiCard.bg)}>
+                <kpiCard.icon className={cn("h-4 w-4", kpiCard.color)} />
               </div>
             </div>
             <div className="mt-4">
-              <span className={cn("text-3xl font-extrabold tracking-tight", kpi.glow ? "text-rose-500" : "")}>{kpi.value}</span>
+              <span className={cn("text-3xl font-extrabold tracking-tight", kpiCard.glow ? "text-rose-500" : "")}>{kpiCard.value}</span>
             </div>
           </motion.div>
         ))}
@@ -182,7 +250,7 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={mockTaskDistribution}
+                  data={taskDistribution}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -191,7 +259,7 @@ export default function DashboardPage() {
                   dataKey="value"
                   stroke="none"
                 >
-                  {mockTaskDistribution.map((entry, index) => (
+                  {taskDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -204,7 +272,7 @@ export default function DashboardPage() {
           </div>
           {/* Legend */}
           <div className="flex justify-center gap-4 mt-2">
-            {mockTaskDistribution.map((entry, idx) => (
+            {taskDistribution.map((entry, idx) => (
               <div key={idx} className="flex items-center gap-1.5 text-xs text-muted">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
                 {entry.name}
@@ -220,7 +288,7 @@ export default function DashboardPage() {
           </h3>
           <div className="flex-1 min-h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={mockProgressTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={progressTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorTasks" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#9d4edd" stopOpacity={0.5}/>
@@ -249,7 +317,7 @@ export default function DashboardPage() {
           </h3>
           <div className="flex-1 min-h-[250px]">
              <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mockWorkload} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={workload} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
                 <RechartsTooltip
@@ -280,7 +348,7 @@ export default function DashboardPage() {
             <Clock className="h-4 w-4 text-sky-400" /> Recent Activity Log
           </h3>
           <div className="space-y-4 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-700 before:to-transparent">
-            {mockActivities.map((activity, index) => (
+            {recentActivities.map((activity, index) => (
                <div key={activity.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                   <div className="flex items-center justify-center w-5 h-5 rounded-full border border-card-border bg-slate-900 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow shadow-slate-900 z-10">
                       <div className="w-1.5 h-1.5 bg-sky-400 rounded-full"></div>
@@ -304,7 +372,7 @@ export default function DashboardPage() {
               <Calendar className="h-4 w-4 text-rose-500" /> Upcoming Deadlines & High Priority
             </h3>
             <div className="space-y-3">
-              {mockUpcomingTasks.map((task) => (
+              {upcomingTasks.map((task) => (
                 <div key={task.id} className="flex items-center justify-between p-3 rounded-xl border border-card-border bg-slate-900/50 hover:bg-slate-800/50 transition-colors">
                   <div className="flex items-center gap-3">
                     <button className="h-5 w-5 rounded-full border border-slate-500 flex items-center justify-center hover:border-emerald-accent hover:text-emerald-accent transition-colors">

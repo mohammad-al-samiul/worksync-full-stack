@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Upload, Image as ImageIcon, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
 
 // Types
 interface Task {
@@ -38,7 +39,7 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
     const fetchTask = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/tasks/${taskId}?include=comments,attachments`);
+        const res = await apiFetch(`/api/tasks/${taskId}`);
         if (res.ok) {
           const data = await res.json();
           setTask(data);
@@ -57,9 +58,8 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
     e.preventDefault();
     if (!newComment.trim() || !taskId) return;
     try {
-      const res = await fetch(`/api/tasks/${taskId}/comments?taskId=${taskId}`, {
+      const res = await apiFetch(`/api/tasks/${taskId}/comments?taskId=${taskId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: newComment.trim() }),
       });
       if (res.ok) {
@@ -83,22 +83,32 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
   const handleUpload = async () => {
     if (!taskId || !previewFiles.length) return;
     setUploadState("uploading");
-    const formData = new FormData();
-    previewFiles.forEach((file) => formData.append("file", file));
     try {
-      const res = await fetch(`/api/tasks/${taskId}/attachments?taskId=${taskId}`, {
-        method: "POST",
-        body: formData,
-      });
-      if (res.ok) {
-        const attachment = await res.json();
-        setTask((prev) => prev && { ...prev, attachments: [...(prev.attachments || []), attachment] });
+      const uploaded: Array<{ id: string; name: string; url: string }> = [];
+      for (const file of previewFiles) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await apiFetch(`/api/tasks/${taskId}/attachments?taskId=${taskId}`, {
+          method: "POST",
+          body: formData,
+        });
+        if (res.ok) {
+          uploaded.push(await res.json());
+        }
+      }
+      if (uploaded.length) {
+        setTask((prev) =>
+          prev && { ...prev, attachments: [...(prev.attachments || []), ...uploaded] }
+        );
         setPreviewFiles([]);
         setUploadState("done");
         setTimeout(() => setUploadState("idle"), 1500);
+      } else {
+        setUploadState("idle");
       }
     } catch (err) {
       console.error(err);
+      setUploadState("idle");
     }
   };
 

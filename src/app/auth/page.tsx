@@ -15,8 +15,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const DEMO_CREDENTIALS: Record<UserRole, { email: string; password: string }> = {
+  Admin: { email: "admin@worksync.io", password: "admin123" },
+  Manager: { email: "manager@worksync.io", password: "manager123" },
+  Member: { email: "member@worksync.io", password: "member123" },
+};
+
 export default function AuthPage() {
-  const { login } = useAuth();
+  const { login, register } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,20 +44,17 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        // Find if this matches one of the demo users
-        let matchedRole: UserRole = "Member";
-        if (email.includes("admin")) matchedRole = "Admin";
-        else if (email.includes("manager")) matchedRole = "Manager";
-        
-        await login(email, matchedRole);
+        const ok = await login(email, password);
+        if (!ok) {
+          setFormError("Invalid email or password. Try demo accounts or run npm run db:seed.");
+        }
       } else {
-        setFormSuccess("Registration successful! Switching to login...");
-        setTimeout(() => {
-          setIsLogin(true);
-          setFormSuccess("");
-        }, 1500);
+        const ok = await register(name, email, password, role);
+        if (!ok) {
+          setFormError("Registration failed. Email may already exist.");
+        }
       }
-    } catch (err) {
+    } catch {
       setFormError("Authentication failed. Please try again.");
     }
   };
@@ -65,8 +68,7 @@ export default function AuthPage() {
     // Switch to login if on signup tab
     setIsLogin(true);
 
-    const demoEmail = `${demoRole.toLowerCase()}@worksync.io`;
-    const demoPass = "********";
+    const { email: demoEmail, password: demoPass } = DEMO_CREDENTIALS[demoRole];
 
     // Smooth typing simulator
     let currentEmail = "";
@@ -87,7 +89,10 @@ export default function AuthPage() {
     
     // Tiny pause before automatic submission
     await new Promise((r) => setTimeout(r, 300));
-    await login(demoEmail, demoRole);
+    const ok = await login(demoEmail, demoPass);
+    if (!ok) {
+      setFormError("Demo login failed. Run npm run db:seed first.");
+    }
     setIsAutofilling(false);
   };
 

@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Users, Mail, UserPlus, Shield, MessageSquare, Search, Award } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { apiFetch, parseJson } from "@/lib/api";
+import { apiRoleToDisplay, displayRoleToApi } from "@/lib/roles";
 
 interface Member {
   id: string;
@@ -23,62 +25,105 @@ export default function TeamPage() {
   const [inviteRole, setInviteRole] = useState<"Admin" | "Manager" | "Member">("Member");
   const [inviteSuccess, setInviteSuccess] = useState("");
 
-  const [members, setMembers] = useState<Member[]>([
-    {
-      id: "1",
-      name: "Alex Rivers",
-      email: "admin@worksync.io",
-      role: "Admin",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-      activeTasks: 3,
-      completedTasks: 18,
-      status: "Online",
-      efficiency: "96.4%",
-    },
-    {
-      id: "2",
-      name: "Sarah Connor",
-      email: "manager@worksync.io",
-      role: "Manager",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
-      activeTasks: 4,
-      completedTasks: 12,
-      status: "In Meeting",
-      efficiency: "92.1%",
-    },
-    {
-      id: "3",
-      name: "Marcus Wright",
-      email: "member@worksync.io",
-      role: "Member",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
-      activeTasks: 2,
-      completedTasks: 22,
-      status: "Online",
-      efficiency: "95.8%",
-    },
-    {
-      id: "4",
-      name: "Kyle Reese",
-      email: "kyle@worksync.io",
-      role: "Member",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
-      activeTasks: 5,
-      completedTasks: 8,
-      status: "Offline",
-      efficiency: "88.5%",
-    },
-  ]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleInvite = (e: React.FormEvent) => {
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await apiFetch("/api/users");
+        if (res.ok) {
+          const data = await parseJson<
+            {
+              id: string;
+              name: string;
+              email: string;
+              role: string;
+              avatar?: string | null;
+              activeTasks: number;
+              completedTasks: number;
+              efficiency: string;
+            }[]
+          >(res);
+          if (data) {
+            const statuses: Member["status"][] = ["Online", "In Meeting", "Offline"];
+            setMembers(
+              data.map((u, i) => ({
+                id: u.id,
+                name: u.name,
+                email: u.email,
+                role: apiRoleToDisplay(u.role),
+                avatar:
+                  u.avatar ||
+                  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.name)}`,
+                activeTasks: u.activeTasks,
+                completedTasks: u.completedTasks,
+                status: statuses[i % statuses.length],
+                efficiency: u.efficiency,
+              }))
+            );
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
 
-    setInviteSuccess(`Invitation sent to ${inviteEmail} as ${inviteRole}!`);
-    setInviteEmail("");
-    
-    // Auto clear success notice
-    setTimeout(() => setInviteSuccess(""), 3000);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: inviteEmail.split("@")[0],
+          email: inviteEmail.trim(),
+          password: "worksync123",
+          role: displayRoleToApi(inviteRole),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setInviteSuccess(
+          `Account created for ${inviteEmail} (${inviteRole}). Temp password: worksync123`
+        );
+        setInviteEmail("");
+        const rosterRes = await apiFetch("/api/users");
+        if (rosterRes.ok) {
+          const roster = await parseJson<typeof members>(rosterRes);
+          if (roster) {
+            const statuses: Member["status"][] = ["Online", "In Meeting", "Offline"];
+            setMembers(
+              roster.map((u: any, i: number) => ({
+                id: u.id,
+                name: u.name,
+                email: u.email,
+                role: apiRoleToDisplay(u.role),
+                avatar:
+                  u.avatar ||
+                  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(u.name)}`,
+                activeTasks: u.activeTasks,
+                completedTasks: u.completedTasks,
+                status: statuses[i % statuses.length],
+                efficiency: u.efficiency,
+              }))
+            );
+          }
+        }
+      } else {
+        setInviteSuccess(data.error || "Invite failed.");
+      }
+    } catch {
+      setInviteSuccess("Invite failed. Check network.");
+    }
+
+    setTimeout(() => setInviteSuccess(""), 5000);
   };
 
   const getStatusColor = (status: string) => {
@@ -184,6 +229,11 @@ export default function TeamPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {loading ? (
+              <div className="col-span-2 flex justify-center py-16">
+                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-cyan-accent" />
+              </div>
+            ) : null}
             {filteredMembers.map((m) => (
               <motion.div
                 key={m.id}

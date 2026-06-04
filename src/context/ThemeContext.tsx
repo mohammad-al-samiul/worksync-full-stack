@@ -18,12 +18,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as Theme | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    } else {
-      // Default to dark mode
-      setTheme("dark");
-    }
+    // Default is always dark; only restore light if user explicitly chose it
+    setTheme(savedTheme === "light" ? "light" : "dark");
     setMounted(true);
   }, []);
 

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import TaskDetailModal from "@/components/TaskDetailModal";
 import { cn } from "@/lib/utils";
+import { apiFetch, parseJson, type PaginatedResponse } from "@/lib/api";
 
 const taskSchema = z.object({
   title: z.string().min(3, "Task title must be at least 3 characters"),
@@ -51,18 +52,20 @@ export default function TasksPage() {
   const fetchTasks = async (newPage = 1) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/tasks?page=${newPage}&limit=${limit}`);
+      const res = await apiFetch(`/api/tasks?page=${newPage}&limit=${limit}`);
       if (res.ok) {
-        const data = await res.json();
+        const data = await parseJson<PaginatedResponse<typeof tasks[0]>>(res);
+        if (!data) return;
         if (newPage === 1) {
           setTasks(data.data);
+          setPage(data.meta.totalPages > 1 ? 2 : 1);
         } else {
-          setTasks(prev => [...prev, ...data.data]);
+          setTasks((prev) => [...prev, ...data.data]);
+          if (newPage < data.meta.totalPages) {
+            setPage(newPage + 1);
+          }
         }
         setTotalPages(data.meta.totalPages);
-        if (newPage < data.meta.totalPages) {
-          setPage(newPage + 1);
-        }
       }
     } catch (err) {
       console.error(err);
@@ -78,14 +81,15 @@ export default function TasksPage() {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch("/api/projects");
+      const res = await apiFetch("/api/projects?limit=100");
       if (res.ok) {
-        setProjects(await res.json());
+        const data = await parseJson<PaginatedResponse<{ id: string; name: string }>>(res);
+        if (data) setProjects(data.data);
       }
     } catch (err) {
       console.error(err);
     }
-  }
+  };
 
   useEffect(() => {
     fetchTasks();
@@ -98,9 +102,8 @@ export default function TasksPage() {
       const payload = { ...data };
       if (!payload.assignedToEmail) delete payload.assignedToEmail;
 
-      const res = await fetch("/api/tasks", {
+      const res = await apiFetch("/api/tasks", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (res.ok) {
@@ -118,9 +121,8 @@ export default function TasksPage() {
 
   const updateTaskStatus = async (id: string, newStatus: string) => {
     try {
-      const res = await fetch(`/api/tasks/${id}`, {
+      const res = await apiFetch(`/api/tasks/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {
@@ -269,8 +271,12 @@ export default function TasksPage() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
+                  onClick={() => {
+                    setSelectedTaskId(task.id);
+                    setTaskModalOpen(true);
+                  }}
                   className={cn(
-                    "bg-card/45 glassmorphism border p-5 rounded-2xl transition-all",
+                    "bg-card/45 glassmorphism border p-5 rounded-2xl transition-all cursor-pointer",
                     isOverdue ? "border-rose-500/50 shadow-[0_0_10px_rgba(244,63,94,0.1)]" : "border-card-border hover:border-cyan-accent/50"
                   )}
                 >
@@ -279,6 +285,7 @@ export default function TasksPage() {
                     {/* Inline Status Update Dropdown */}
                     <select 
                         value={task.status}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) => updateTaskStatus(task.id, e.target.value)}
                         className={cn(
                             "text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider focus:outline-none bg-slate-900 border appearance-none cursor-pointer",

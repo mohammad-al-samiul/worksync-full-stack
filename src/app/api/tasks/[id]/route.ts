@@ -2,6 +2,63 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, AuthenticatedRequest } from "@/lib/middleware";
 
+async function canAccessTask(
+  task: { assignedToId: string | null; projectId: string },
+  userId: string,
+  role: string
+) {
+  if (role === "ADMIN") return true;
+
+  if (task.assignedToId === userId) return true;
+
+  const project = await prisma.project.findFirst({
+    where: {
+      id: task.projectId,
+      OR: [{ createdById: userId }, { members: { some: { id: userId } } }],
+    },
+  });
+  return !!project;
+}
+
+/**
+ * GET /api/tasks/[id]
+ */
+export const GET = withAuth(
+  async (request: AuthenticatedRequest, { params }: { params: Promise<{ id: string }> }) => {
+    try {
+      const { id } = await params;
+      const { userId, role } = request.user;
+
+      const task = await prisma.task.findUnique({
+        where: { id },
+        include: {
+          project: { select: { id: true, name: true } },
+          assignedTo: { select: { id: true, name: true, avatar: true } },
+          comments: {
+            include: { author: { select: { name: true, avatar: true } } },
+            orderBy: { createdAt: "asc" },
+          },
+          attachments: true,
+        },
+      });
+
+      if (!task) {
+        return NextResponse.json({ error: "Task not found" }, { status: 404 });
+      }
+
+      const allowed = await canAccessTask(task, userId, role);
+      if (!allowed) {
+        return NextResponse.json({ error: "Access Denied" }, { status: 403 });
+      }
+
+      return NextResponse.json(task);
+    } catch (error) {
+      console.error("GET Task Exception:", error);
+      return NextResponse.json({ error: "Failed to fetch task" }, { status: 500 });
+    }
+  }
+);
+
 /**
  * PATCH /api/tasks/[id]
  * Updates task details. Strictly enforces user roles and assignments:

@@ -17,6 +17,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiFetch, parseJson } from "@/lib/api";
 
 interface HeaderProps {
   onToggleMobileSidebar: () => void;
@@ -36,35 +37,49 @@ export default function Header({ onToggleMobileSidebar }: HeaderProps) {
   const { theme, toggleTheme } = useTheme();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: "1",
-      title: "Task Assigned",
-      desc: "Implement glassmorphic Sidebar component.",
-      type: "success",
-      time: "5m ago",
-      read: false,
-    },
-    {
-      id: "2",
-      title: "Deadline Warning",
-      desc: "Framer Motion layout validation due in 2 hours.",
-      type: "warning",
-      time: "32m ago",
-      read: false,
-    },
-    {
-      id: "3",
-      title: "New Comment",
-      desc: "Sarah Connor commented on 'Auth Flow Refactor'.",
-      type: "comment",
-      time: "1h ago",
-      read: true,
-    },
-  ]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const res = await apiFetch("/api/notifications");
+        if (res.ok) {
+          const logs = await parseJson<
+            { id: string; actionDescription: string; timestamp: string }[]
+          >(res);
+          if (logs?.length) {
+            setNotifications(
+              logs.map((log, i) => {
+                const lower = log.actionDescription.toLowerCase();
+                const type: NotificationItem["type"] = lower.includes("overdue")
+                  ? "warning"
+                  : lower.includes("comment")
+                    ? "comment"
+                    : "success";
+                const mins = Math.floor(
+                  (Date.now() - new Date(log.timestamp).getTime()) / 60000
+                );
+                return {
+                  id: log.id,
+                  title: type === "warning" ? "Alert" : type === "comment" ? "Activity" : "Update",
+                  desc: log.actionDescription,
+                  type,
+                  time: mins < 60 ? `${mins}m ago` : `${Math.floor(mins / 60)}h ago`,
+                  read: i > 2,
+                };
+              })
+            );
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    loadNotifications();
+  }, [user]);
 
   // Close dropdowns on outside click
   useEffect(() => {

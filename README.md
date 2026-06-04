@@ -1,83 +1,186 @@
-# WorkSync – Project & Task Management Dashboard
+# WorkSync
+
+**Smart Project & Task Collaboration System** — premium dashboard UI, role-based APIs, and PostgreSQL persistence via Prisma 7.
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| **[GUIDE.md](./GUIDE.md)** | **Full technical documentation** — system design, functional & non-functional requirements, ER diagram, database design, HLD/LLD (with Mermaid diagrams), features, API reference, Prisma setup |
+
+> GitHub/GitLab এ `GUIDE.md` লিংকে ক্লিক করলে টেবিল অফ কনটেন্টসহ সব সেকশন দেখতে পারবেন।
+
+**Guide sections (direct links):**
+
+- [Product Overview](./GUIDE.md#1-product-overview)
+- [Functional Requirements](./GUIDE.md#2-functional-requirements)
+- [Non-Functional Requirements](./GUIDE.md#3-non-functional-requirements)
+- [Features](./GUIDE.md#4-features-implemented)
+- [System Design](./GUIDE.md#5-system-design)
+- [High-Level Design (HLD)](./GUIDE.md#6-high-level-design-hld)
+- [Low-Level Design (LLD)](./GUIDE.md#7-low-level-design-lld)
+- [Entity Relationship Diagram](./GUIDE.md#8-entity-relationship-diagram)
+- [Database Design](./GUIDE.md#9-database-design)
+- [API Reference](./GUIDE.md#10-api-reference)
+- [Prisma & PostgreSQL Setup](./GUIDE.md#13-prisma--postgresql-setup)
+
+---
 
 ## Overview
-WorkSync is a **premium, data‑dense yet ultra‑clean** full‑stack application built with **Next.js (custom version)**, **React**, **TypeScript**, **Tailwind‑style vanilla CSS**, **Framer Motion** and **Recharts**. It provides a modern dashboard for managing projects and tasks with:
 
-- KPI cards, analytical charts (doughnut, area, bar) in a neon‑dark / clean‑light aesthetic.
-- Advanced filtering, sorting, pagination (infinite scroll) for large data sets.
-- A glass‑morphic **Task Detail Modal** with comments, file attachment preview, and quick status updates.
-- In‑app **notification center** (bell icon) for task assignments and completions.
-- Strict backend validation (duplicate titles, reassignment rules) with clear error messages.
+WorkSync helps teams manage **projects**, **tasks**, **comments**, and **activity logs** through a glassmorphic Next.js console with:
 
-The UI follows a curated color palette, subtle gradients, glass‑morphism, and micro‑animations to provide a premium feel.
+- KPI cards and Recharts analytics (dashboard & analytics pages)
+- Task grid with filters, sorting, pagination / load-more
+- Task detail modal (comments, attachments, status updates)
+- JWT-secured REST API with **Admin / Project Manager / Team Member** RBAC
+- Dark & light themes with Framer Motion micro-interactions
+
+---
 
 ## Tech Stack
-- **Framework**: Next.js (custom version – see `node_modules/next/dist/docs/` for API differences)
-- **Language**: TypeScript, React
-- **Styling**: Vanilla CSS with design tokens in `src/app/layout.tsx`
-- **Animations**: Framer Motion
-- **Charts**: Recharts
-- **State Management**: React Hook Form + local component state
-- **Backend**: API routes under `src/app/api/` using Next.js Edge runtime
-- **Database**: (placeholder – mock in‑memory for this assignment)
 
-## Getting Started
-1. **Install dependencies**
-   ```bash
-   cd c:/Users/alsam/Documents/web-dev/elite-pool-assignment/WorkSync
-   npm install
-   ```
-2. **Run the development server**
-   ```bash
-   npm run dev
-   ```
-   The app will be available at `http://localhost:3000`.
-3. **Build for production** (optional)
-   ```bash
-   npm run build && npm start
-   ```
+| Layer | Technology |
+|-------|------------|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, TypeScript, Tailwind CSS v4 |
+| Animation / Charts | Framer Motion, Recharts |
+| Forms | React Hook Form, Zod |
+| API | Next.js Route Handlers (`src/app/api/`) |
+| Database | PostgreSQL + **Prisma 7** (`@prisma/adapter-pg`, `pg`) |
+| Auth | bcryptjs + JSON Web Tokens |
 
-## Project Structure (key parts)
-```
-src/
-├─ app/
-│  ├─ api/            # Backend endpoints (tasks, projects, notifications)
-│  ├─ tasks/
-│  │   └─ page.tsx   # Main Tasks dashboard – pagination, filters, modal
-│  └─ layout.tsx      # Global layout with dark‑light theme and navbar
-├─ components/
-│  ├─ TaskDetailModal.tsx   # Glassmorphic drawer/modal for task details
-│  ├─ KPIcard.tsx           # Reusable KPI card component
-│  └─ NotificationCenter.tsx# Bell icon + dropdown list
-└─ lib/
-   └─ utils.ts               # Helper functions (classNames, date utils)
+---
+
+## Quick Start
+
+### 1. Clone and install
+
+```bash
+git clone <your-repo-url>
+cd worksync-full-stack
+npm install
 ```
 
-## Features Implemented
-- **Task Grid** with infinite scroll (`Load More` button) and advanced filters.
-- **Task Detail Modal** showing description, assignee, deadline, comments, and drag‑and‑drop file preview.
-- **Pagination** via `GET /api/tasks?page=&limit=`.
-- **Inline status dropdown** for quick updates.
-- **Responsive design** with glassmorphism and neon accents.
-- **ESLint/TS lint fixes** and type‑safe code.
+### 2. Configure environment
 
-## Design System
-- **Palette**: Dark background `#0a0a0a`, accent cyan `#00f2fe`, rose for overdue, emerald for completed.
-- **Typography**: Google Font **Inter** imported in `layout.tsx`.
-- **Glassmorphism**: `bg-card/45 glassmorphism` utility class adds backdrop blur and subtle transparency.
-- **Micro‑animations**: Framer Motion fades and scales elements on mount/unmount.
+```bash
+cp .env.example .env
+```
 
-## Extending the App
-- Add server‑side storage (e.g., Prisma + PostgreSQL).
-- Implement real‑time notifications with WebSockets or Supabase.
-- Replace placeholder image upload with S3/Cloudinary integration.
-- Expand charts on the Dashboard (`src/app/dashboard/page.tsx`).
+Edit `.env`:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/worksync?schema=public"
+JWT_SECRET="your-long-random-secret"
+```
+
+### 3. Database setup
+
+Ensure PostgreSQL is running, then:
+
+```bash
+npm run db:migrate   # apply migrations
+npm run db:seed      # full demo dataset (users, projects, tasks, comments, logs)
+# npm run db:seed:reset   # wipe DB then seed
+```
+
+Alternative without migration history:
+
+```bash
+npm run db:push
+npm run db:seed
+```
+
+### 4. Run the app
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+### Demo logins (after `db:seed`)
+
+| Email | Password |
+|-------|----------|
+| `admin@worksync.io` | `admin123` |
+| `manager@worksync.io` | `manager123` |
+| `member@worksync.io` | `member123` |
+
+Use these with `POST /api/auth/login` or wire the auth UI (see [Guide — Roadmap](./GUIDE.md#15-roadmap--gaps)).
+
+---
+
+## NPM Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Development server |
+| `npm run build` | `prisma generate` + production build |
+| `npm run start` | Production server |
+| `npm run lint` | ESLint |
+| `npm run db:generate` | Generate Prisma Client |
+| `npm run db:migrate` | Run migrations (dev) |
+| `npm run db:push` | Push schema to DB |
+| `npm run db:seed` | Seed full demo dataset |
+| `npm run db:seed:reset` | Clear tables + seed |
+| `npm run db:studio` | Prisma Studio GUI |
+
+---
+
+## Project Structure (summary)
+
+```
+src/app/          → pages + API routes
+src/components/   → Sidebar, Header, TaskDetailModal, AppLayout
+src/context/      → Auth, Theme
+src/lib/          → prisma, auth, middleware
+prisma/           → schema, migrations, seed
+```
+
+Full tree: [GUIDE.md §14](./GUIDE.md#14-project-structure)
+
+---
+
+## API (summary)
+
+Protected routes require:
+
+```http
+Authorization: Bearer <jwt_from_login>
+```
+
+| Endpoint | Methods |
+|----------|---------|
+| `/api/auth/register` | POST |
+| `/api/auth/login` | POST |
+| `/api/projects` | GET, POST |
+| `/api/projects/[id]` | GET, PUT, DELETE |
+| `/api/tasks` | GET, POST |
+| `/api/tasks/[id]` | PATCH |
+| `/api/tasks/[id]/comments` | GET, POST |
+| `/api/tasks/[id]/attachments` | POST |
+| `/api/activity` | GET |
+| `/api/notifications` | GET |
+
+Details: [GUIDE.md §10](./GUIDE.md#10-api-reference)
+
+---
 
 ## Contributing
-1. Fork the repository.
-2. Create a feature branch.
-3. Ensure lint passes: `npm run lint`.
-4. Submit a pull request.
+
+1. Fork the repository  
+2. Create a feature branch  
+3. Run `npm run lint`  
+4. Open a pull request  
+
+Architecture and requirements: **[GUIDE.md](./GUIDE.md)**
+
+---
 
 ## License
+
 MIT © 2026 Mohammad Al Samiul

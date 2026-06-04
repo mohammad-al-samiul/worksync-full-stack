@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { History, GitCommit, GitPullRequest, ShieldAlert, CheckSquare, MessageSquare, Rocket, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { apiFetch, parseJson } from "@/lib/api";
 
 interface Activity {
   id: string;
@@ -17,74 +18,71 @@ interface Activity {
   project: string;
 }
 
+function inferActivityType(text: string): Activity["type"] {
+  const lower = text.toLowerCase();
+  if (lower.includes("overdue") || lower.includes("denied") || lower.includes("deleted")) return "alert";
+  if (lower.includes("comment")) return "comment";
+  if (lower.includes("logged in") || lower.includes("registered")) return "deploy";
+  if (lower.includes("assigned") || lower.includes("created") || lower.includes("updated") || lower.includes("completed")) {
+    return "task";
+  }
+  return "task";
+}
+
+function formatRelativeTime(date: Date): string {
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
 export default function ActivityPage() {
   const [filter, setFilter] = useState<"All" | "Updates" | "Code" | "Alerts">("All");
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState<Activity[]>([]);
 
-  const [activities, setActivities] = useState<Activity[]>([
-    {
-      id: "1",
-      user: "Alex Rivers",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80",
-      action: "pushed commit to main branch",
-      target: "feat: add theme context variables & provider setup",
-      type: "commit",
-      time: "8m ago",
-      hash: "8bbafb3",
-      project: "Cyber Interface System",
-    },
-    {
-      id: "2",
-      user: "Sarah Connor",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80",
-      action: "merged pull request #42",
-      target: "refactor: optimize rendering loops in glassmorphism grids",
-      type: "pr",
-      time: "24m ago",
-      hash: "cfefdeb",
-      project: "Glassmorphism Themes",
-    },
-    {
-      id: "3",
-      user: "Marcus Wright",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80",
-      action: "completed sprint task",
-      target: "Design responsive collapsible sidebar menu",
-      type: "task",
-      time: "1h ago",
-      project: "Glassmorphism Themes",
-    },
-    {
-      id: "4",
-      user: "Kyle Reese",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&q=80",
-      action: "raised security flag",
-      target: "High-level token vulnerability detected in OAuth workflow",
-      type: "alert",
-      time: "3h ago",
-      project: "OAuth 2.0 Auth Gate",
-    },
-    {
-      id: "5",
-      user: "Sarah Connor",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80",
-      action: "commented on issue #105",
-      target: "'We need to restrict manager roles from modifying admin configs.'",
-      type: "comment",
-      time: "5h ago",
-      project: "OAuth 2.0 Auth Gate",
-    },
-    {
-      id: "6",
-      user: "Jenkins CI",
-      avatar: "https://images.unsplash.com/photo-1618401471353-b98aedd07871?auto=format&fit=crop&w=80&q=80",
-      action: "deployed release v0.4.2-rc2",
-      target: "Successfully pushed builds to Vercel production edge",
-      type: "deploy",
-      time: "1d ago",
-      project: "Cyber Interface System",
-    },
-  ]);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await apiFetch("/api/activity");
+        if (res.ok) {
+          const logs = await parseJson<
+            {
+              id: string;
+              actionDescription: string;
+              timestamp: string;
+              user: { name: string; avatar?: string | null };
+            }[]
+          >(res);
+          if (logs) {
+            setActivities(
+              logs.map((log) => ({
+                id: log.id,
+                user: log.user.name,
+                avatar:
+                  log.user.avatar ||
+                  `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(log.user.name)}`,
+                action: "performed action",
+                target: log.actionDescription,
+                type: inferActivityType(log.actionDescription),
+                time: formatRelativeTime(new Date(log.timestamp)),
+                project: "WorkSync",
+              }))
+            );
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -178,6 +176,11 @@ export default function ActivityPage() {
 
       {/* Timeline List */}
       <div className="space-y-3.5 relative before:absolute before:left-12 before:top-4 before:bottom-4 before:w-0.5 before:bg-card-border/30">
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-cyan-accent" />
+          </div>
+        ) : null}
         <AnimatePresence mode="popLayout">
           {filteredActivities.map((act) => (
             <motion.div

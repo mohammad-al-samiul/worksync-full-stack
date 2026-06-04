@@ -14,6 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiFetch, parseJson, type PaginatedResponse } from "@/lib/api";
 
 const projectSchema = z.object({
   name: z.string().min(3, "Project name must be at least 3 characters"),
@@ -66,10 +67,10 @@ export default function ProjectsPage() {
       if (showLoading) {
         setLoading(true);
       }
-      const res = await fetch("/api/projects");
+      const res = await apiFetch("/api/projects?limit=100");
       if (res.ok) {
-        const data = await res.json();
-        setProjects(data);
+        const data = await parseJson<PaginatedResponse<Project>>(res);
+        if (data) setProjects(data.data);
       }
     } catch (err) {
       console.error(err);
@@ -88,9 +89,8 @@ export default function ProjectsPage() {
 
   const onSubmit = async (data: ProjectFormValues) => {
     try {
-      const res = await fetch("/api/projects", {
+      const res = await apiFetch("/api/projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       if (res.ok) {
