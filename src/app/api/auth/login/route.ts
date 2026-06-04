@@ -4,7 +4,10 @@ import { comparePassword, signToken } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
+    const email =
+      typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body.password === "string" ? body.password : "";
 
     if (!email || !password) {
       return NextResponse.json(

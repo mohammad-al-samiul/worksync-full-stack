@@ -15,12 +15,26 @@ export interface User {
   avatar: string;
 }
 
+export type AuthResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  /** True only while restoring session from localStorage on first load */
+  isInitializing: boolean;
+  /** True while login/register request is in flight */
+  isSubmitting: boolean;
+  /** @deprecated Use isInitializing — kept for older imports */
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string, role: UserRole) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    role: UserRole
+  ) => Promise<AuthResult>;
   logout: () => void;
 }
 
@@ -46,7 +60,8 @@ function mapApiUser(raw: {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -68,31 +83,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setStoredToken(null);
       }
     }
-    setIsLoading(false);
+    setIsInitializing(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
+  const login = async (email: string, password: string): Promise<AuthResult> => {
+    const normalizedEmail = email.trim().toLowerCase();
+    setIsSubmitting(true);
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: normalizedEmail, password }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        return false;
+        const message =
+          typeof data.error === "string"
+            ? data.error
+            : res.status >= 500
+              ? "Server error. Check DATABASE_URL and JWT_SECRET, then restart the app."
+              : "Invalid email or password.";
+        return { ok: false, error: message };
+      }
+      if (!data.token || !data.user) {
+        return {
+          ok: false,
+          error: "Login response was invalid. Restart the dev server and try again.",
+        };
       }
       setStoredToken(data.token);
       const loggedInUser = mapApiUser(data.user);
       setUser(loggedInUser);
       localStorage.setItem("user", JSON.stringify(loggedInUser));
       router.push("/dashboard");
-      return true;
+      return { ok: true };
     } catch {
-      return false;
+      return {
+        ok: false,
+        error:
+          "Cannot reach the login API. Is `npm run dev` running on this same site?",
+      };
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -101,33 +133,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string,
     role: UserRole
-  ): Promise<boolean> => {
-    setIsLoading(true);
+  ): Promise<AuthResult> => {
+    setIsSubmitting(true);
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          email,
+          email: email.trim().toLowerCase(),
           password,
           role: displayRoleToApi(role),
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        return false;
+        const message =
+          typeof data.error === "string"
+            ? data.error
+            : res.status >= 500
+              ? "Server error. Check DATABASE_URL and JWT_SECRET."
+              : "Registration failed. Email may already exist.";
+        return { ok: false, error: message };
+      }
+      if (!data.token || !data.user) {
+        return { ok: false, error: "Registration response was invalid." };
       }
       setStoredToken(data.token);
       const loggedInUser = mapApiUser(data.user);
       setUser(loggedInUser);
       localStorage.setItem("user", JSON.stringify(loggedInUser));
       router.push("/dashboard");
-      return true;
+      return { ok: true };
     } catch {
-      return false;
+      return {
+        ok: false,
+        error: "Cannot reach the server. Check your deployment settings.",
+      };
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -143,7 +187,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         isAuthenticated: !!user,
-        isLoading,
+        isInitializing,
+        isSubmitting,
+        isLoading: isInitializing,
         login,
         register,
         logout,

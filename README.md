@@ -115,6 +115,71 @@ Use these on the login page or with `POST /api/auth/login`.
 
 ---
 
+## Production deployment (fix “Demo login failed”)
+
+That message means **login API failed** — usually the **production database has no users** and was never migrated or seeded.
+
+### Step 1 — Environment variables on your host (Vercel, Railway, etc.)
+
+| Variable | Required |
+|----------|----------|
+| `DATABASE_URL` | Yes — PostgreSQL URL (Neon, Supabase, Railway, etc.). Often needs `?sslmode=require` at the end. |
+| `JWT_SECRET` | Yes — long random string (not the example from `.env.example`) |
+
+### Step 2 — Apply database schema on deploy
+
+The `build` script runs `prisma migrate deploy` so tables are created when you deploy.
+
+If deploy fails on migrate, run once from your machine:
+
+```bash
+DATABASE_URL="your-production-url" npm run db:migrate:deploy
+```
+
+### Supabase: `db push` stuck on port 6543?
+
+Prisma **cannot** run `db push` on Supabase **transaction pooler** (`:6543`). It will hang forever.
+
+Use **two URLs** in `.env` (see [.env.example](.env.example)):
+
+| Variable | Port | Used for |
+|----------|------|----------|
+| `DATABASE_URL` | **6543** (pooler) | App + `db:seed` |
+| `DIRECT_URL` | **5432** (direct) | `db:push`, `db:migrate`, Prisma Studio |
+
+Then run:
+
+```bash
+npm run db:push    # uses DIRECT_URL automatically
+npm run db:seed
+# or one command:
+npm run db:setup
+```
+
+### Step 3 — Add demo users (pick one)
+
+**Option A — Seed demo data (recommended for demos)**
+
+From your computer, point at the **production** database:
+
+```bash
+DATABASE_URL="your-production-postgresql-url" npm run db:seed
+```
+
+Then demo buttons work: `admin@worksync.io` / `admin123`, etc.
+
+**Option B — No seed**
+
+On the live site, open **Create Account**, register a real user, then sign in. Demo buttons will not work until you seed.
+
+### Step 4 — Redeploy and test
+
+Open `/auth`, use **Create Account** or demo login after seed.
+
+**Bangla guide:** [GUIDE.bn.md §13](./GUIDE.bn.md#13-প্রিজমা-ও-পোস্টগ্রেসকিউএল-সেটআপ)
+
+---
+
 ## NPM scripts
 
 | Script | What it does |
@@ -124,7 +189,8 @@ Use these on the login page or with `POST /api/auth/login`.
 | `npm run start` | Run production server |
 | `npm run lint` | Check code style |
 | `npm run db:generate` | Generate Prisma client |
-| `npm run db:migrate` | Run database migrations |
+| `npm run db:migrate` | Run database migrations (local dev) |
+| `npm run db:migrate:deploy` | Apply migrations to production DB |
 | `npm run db:push` | Push schema to database |
 | `npm run db:seed` | Add demo data |
 | `npm run db:seed:reset` | Clear tables, then seed |

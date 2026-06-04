@@ -22,7 +22,7 @@ const DEMO_CREDENTIALS: Record<UserRole, { email: string; password: string }> = 
 };
 
 export default function AuthPage() {
-  const { login, register } = useAuth();
+  const { login, register, isSubmitting } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,14 +44,14 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        const ok = await login(email, password);
-        if (!ok) {
-          setFormError("Invalid email or password. Try demo accounts or run npm run db:seed.");
+        const result = await login(email, password);
+        if (!result.ok) {
+          setFormError(result.error);
         }
       } else {
-        const ok = await register(name, email, password, role);
-        if (!ok) {
-          setFormError("Registration failed. Email may already exist.");
+        const result = await register(name, email, password, role);
+        if (!result.ok) {
+          setFormError(result.error);
         }
       }
     } catch {
@@ -60,38 +60,20 @@ export default function AuthPage() {
   };
 
   const handleDemoFill = async (demoRole: UserRole) => {
-    if (isAutofilling) return;
+    if (isAutofilling || isSubmitting) return;
     setIsAutofilling(true);
     setFormError("");
     setFormSuccess("");
-    
-    // Switch to login if on signup tab
     setIsLogin(true);
 
     const { email: demoEmail, password: demoPass } = DEMO_CREDENTIALS[demoRole];
-
-    // Smooth typing simulator
-    let currentEmail = "";
-    for (let i = 0; i <= demoEmail.length; i++) {
-      await new Promise((r) => setTimeout(r, 20));
-      currentEmail = demoEmail.slice(0, i);
-      setEmail(currentEmail);
-    }
-
-    let currentPass = "";
-    for (let i = 0; i <= demoPass.length; i++) {
-      await new Promise((r) => setTimeout(r, 20));
-      currentPass = demoPass.slice(0, i);
-      setPassword(currentPass);
-    }
-
+    setEmail(demoEmail);
+    setPassword(demoPass);
     setRole(demoRole);
-    
-    // Tiny pause before automatic submission
-    await new Promise((r) => setTimeout(r, 300));
-    const ok = await login(demoEmail, demoPass);
-    if (!ok) {
-      setFormError("Demo login failed. Run npm run db:seed first.");
+
+    const result = await login(demoEmail, demoPass);
+    if (!result.ok) {
+      setFormError(result.error);
     }
     setIsAutofilling(false);
   };
@@ -227,7 +209,7 @@ export default function AuthPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@worksync.io"
                   className="w-full h-11 pl-10 pr-4 bg-slate-950/60 rounded-xl border border-card-border/40 text-sm focus:outline-none focus:border-cyan-accent focus:ring-1 focus:ring-cyan-accent transition-all duration-200"
-                  disabled={isAutofilling}
+                  disabled={isAutofilling || isSubmitting}
                 />
               </div>
             </div>
@@ -242,7 +224,7 @@ export default function AuthPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full h-11 pl-10 pr-4 bg-slate-950/60 rounded-xl border border-card-border/40 text-sm focus:outline-none focus:border-cyan-accent focus:ring-1 focus:ring-cyan-accent transition-all duration-200"
-                  disabled={isAutofilling}
+                  disabled={isAutofilling || isSubmitting}
                 />
               </div>
             </div>
@@ -250,7 +232,7 @@ export default function AuthPage() {
             {/* Form Button */}
             <button
               type="submit"
-              disabled={isAutofilling}
+              disabled={isAutofilling || isSubmitting}
               className="w-full h-11 mt-2 bg-gradient-to-r from-cyan-accent to-purple-accent hover:from-cyan-accent hover:to-purple-accent text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_20px_rgba(0,242,254,0.25)] hover:shadow-[0_4px_25px_rgba(157,78,221,0.4)] active:scale-98 transition-all duration-300 disabled:opacity-50"
             >
               <span>{isLogin ? "Decrypt Console" : "Initialize Key"}</span>
@@ -278,7 +260,7 @@ export default function AuthPage() {
                 <button
                   key={r}
                   type="button"
-                  disabled={isAutofilling}
+                  disabled={isAutofilling || isSubmitting}
                   onClick={() => handleDemoFill(r)}
                   className="py-2.5 px-1 border border-card-border/40 hover:border-cyan-accent/50 bg-slate-950/60 hover:bg-slate-950 rounded-xl text-center cursor-pointer transition-all duration-200 group hover:shadow-[0_0_12px_rgba(0,242,254,0.15)] flex flex-col items-center justify-center gap-1"
                 >

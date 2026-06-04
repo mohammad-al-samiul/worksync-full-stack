@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isLoading } = useAuth();
+  const { user, isInitializing } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
 
@@ -20,10 +20,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!isLoading && !user && !isAuthPage) {
+    if (!isInitializing && !user && !isAuthPage) {
       router.push("/auth");
     }
-  }, [user, isLoading, isAuthPage, router]);
+  }, [user, isInitializing, isAuthPage, router]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   // Close mobile sidebar on route change
@@ -37,7 +37,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   // Beautiful cyber loading state
-  if (isLoading || (!user && !isAuthPage)) {
+  if (isInitializing || (!user && !isAuthPage)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0b0f19] text-white cyber-mesh cyber-grid">
         <div className="flex flex-col items-center gap-4 p-8 rounded-2xl border border-purple-accent/20 bg-slate-900/60 glassmorphism shadow-[0_0_50px_rgba(157,78,221,0.15)]">

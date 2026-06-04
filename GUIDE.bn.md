@@ -513,7 +513,21 @@ flowchart TB
 - Node.js 20+
 - PostgreSQL 14+ (লোকাল বা রিমোট)
 
-### 13.2 প্রথমবার সেটআপ
+### 13.2 প্রোডাকশনে “Demo login failed”
+
+লাইভ সাইটে ডেমো বাটন কাজ করতে **প্রোডাকশন ডাটাবেসে** ইউজার থাকতে হবে।
+
+1. হোস্টে (Vercel ইত্যাদি) `DATABASE_URL` ও `JWT_SECRET` সেট করুন  
+2. ডিপ্লয় করুন (`build`-এ `prisma migrate deploy` চলে)  
+3. একবার সিড চালান (আপনার PC থেকে):
+
+```bash
+DATABASE_URL="আপনার-প্রোডাকশন-পোস্টগ্রেস-url" npm run db:seed
+```
+
+অথবা সাইটে **Create Account** দিয়ে নতুন ইউজার বানান — সিড ছাড়াও লগইন হবে।
+
+### 13.3 প্রথমবার সেটআপ (লোকাল)
 
 ```bash
 cp .env.example .env
@@ -525,7 +539,7 @@ npm run db:seed
 npm run dev
 ```
 
-### 13.3 NPM স্ক্রিপ্ট
+### 13.4 NPM স্ক্রিপ্ট
 
 | স্ক্রিপ্ট | কাজ |
 |----------|-----|
@@ -536,7 +550,7 @@ npm run dev
 | `db:seed` | ডেমো ডেটা |
 | `db:seed:reset` | সব মুছে আবার seed |
 
-### 13.4 seed-এর পর ডেটা (আনুমানিক)
+### 13.5 seed-এর পর ডেটা (আনুমানিক)
 
 | এন্টিটি | সংখ্যা |
 |---------|--------|
@@ -549,7 +563,7 @@ npm run dev
 
 ডেটা ফাইল: [`prisma/seed/data.mjs`](prisma/seed/data.mjs)
 
-### 13.5 ডেমো অ্যাকাউন্ট
+### 13.6 ডেমো অ্যাকাউন্ট
 
 | ইমেইল | পাসওয়ার্ড | রোল |
 |-------|-----------|------|
@@ -559,12 +573,12 @@ npm run dev
 
 অন্যান্য: `kyle@worksync.io`, `john@worksync.io`, … — পাসওয়ার্ড: ইমেইলের আগের অংশ + `123` (যেমন `kyle123`)
 
-### 13.6 Prisma 7 নোট
+### 13.7 Prisma 7 নোট
 
 - URL: `prisma.config.ts`
 - রানটাইম: `PrismaPg` + `pg.Pool` in `src/lib/prisma.ts`
 
-### 13.7 অ্যাটাচমেন্ট ফাইল
+### 13.8 অ্যাটাচমেন্ট ফাইল
 
 আপলোড করা ফাইল যায়: `public/uploads/tasks/<taskId>/`  
 URL: `/uploads/tasks/<taskId>/<filename>`

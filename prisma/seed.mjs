@@ -9,8 +9,9 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import pg from "pg";
 import bcrypt from "bcryptjs";
+import { getAppDatabaseUrl } from "./cli-env.mjs";
+import { createPgPool } from "./pg-pool.mjs";
 import {
   SEED_USERS,
   SEED_PROJECTS,
@@ -20,15 +21,7 @@ import {
   SEED_ACTIVITY_LOGS,
 } from "./seed/data.mjs";
 
-const { Pool } = pg;
-
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  console.error("DATABASE_URL is required. Copy .env.example to .env first.");
-  process.exit(1);
-}
-
-const pool = new Pool({ connectionString });
+const pool = createPgPool(getAppDatabaseUrl());
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
