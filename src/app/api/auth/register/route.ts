@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     await prisma.activityLog.create({
       data: {
         userId: user.id,
-        actionDescription: `Registered new user account: '${name}' with role '${userRole}'`,
+        actionDescription: `New account created for ${name} (${userRole.replace("_", " ").toLowerCase()})`,
       },
     });
 

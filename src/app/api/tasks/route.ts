@@ -157,7 +157,7 @@ export const POST = withRole(
       await prisma.activityLog.create({
         data: {
           userId,
-          actionDescription: `Assigned task '${title}' to '${assignedName}' on project '${task.project.name}'`,
+          actionDescription: `Task "${title}" assigned to ${assignedName} on ${task.project.name}`,
         },
       });
 

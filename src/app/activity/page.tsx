@@ -138,7 +138,7 @@ export default function ActivityPage() {
           <History className="h-6 w-6 text-purple-accent" />
           <span>Activity Log</span>
         </h1>
-        <p className="text-xs text-muted mt-1">Review live auditing and development telemetry updates.</p>
+        <p className="text-xs text-muted mt-1">Recent actions across projects, tasks, and team updates.</p>
       </div>
 
       {/* Toolbar Options */}
@@ -239,7 +239,7 @@ export default function ActivityPage() {
 
         {filteredActivities.length === 0 && (
           <div className="text-center p-8 rounded-2xl border border-dashed border-card-border/60 bg-card/10">
-            <p className="text-xs text-muted">No telemetry items matches the filters.</p>
+            <p className="text-xs text-muted">Nothing matches your filters.</p>
           </div>
         )}
       </div>

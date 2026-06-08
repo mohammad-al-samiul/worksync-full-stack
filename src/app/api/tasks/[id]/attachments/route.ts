@@ -14,7 +14,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
 
     const task = await prisma.task.findUnique({
       where: { id: taskId },
-      select: { id: true, projectId: true, assignedToId: true },
+      select: { id: true, projectId: true, assignedToId: true, title: true },
     });
     if (!task) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
@@ -33,6 +33,14 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
         name: file.name,
         url: publicUrl,
         task: { connect: { id: taskId } },
+      },
+    });
+
+    const { userId } = request.user;
+    await prisma.activityLog.create({
+      data: {
+        userId,
+        actionDescription: `File "${file.name}" uploaded to task "${task.title}"`,
       },
     });
 

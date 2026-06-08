@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     await prisma.activityLog.create({
       data: {
         userId: user.id,
-        actionDescription: `Logged in to WorkSync console.`,
+        actionDescription: `Signed in`,
       },
     });
 

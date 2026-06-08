@@ -114,7 +114,7 @@ export const PATCH = withAuth(async (request: AuthenticatedRequest, { params }: 
       await prisma.activityLog.create({
         data: {
           userId,
-          actionDescription: `Updated status of task '${task.title}' to '${body.status}'`,
+          actionDescription: `Task "${task.title}" marked as ${body.status.replace("_", " ")}`,
         },
       });
 
@@ -204,7 +204,7 @@ export const PATCH = withAuth(async (request: AuthenticatedRequest, { params }: 
     await prisma.activityLog.create({
       data: {
         userId,
-        actionDescription: `Updated details for task '${task.title}'`,
+        actionDescription: `Task "${task.title}" updated`,
       },
     });
 
@@ -212,5 +212,52 @@ export const PATCH = withAuth(async (request: AuthenticatedRequest, { params }: 
   } catch (error) {
     console.error("PATCH Task Exception:", error);
     return NextResponse.json({ error: "Failed to update task" }, { status: 500 });
+  }
+});
+
+/**
+ * DELETE /api/tasks/[id]
+ * Removes a task. Admin and Project Manager only.
+ */
+export const DELETE = withAuth(async (request: AuthenticatedRequest, { params }: { params: Promise<{ id: string }> }) => {
+  try {
+    const { id } = await params;
+    const { userId, role } = request.user;
+
+    if (role === "TEAM_MEMBER") {
+      return NextResponse.json({ error: "Access Denied" }, { status: 403 });
+    }
+
+    const task = await prisma.task.findUnique({
+      where: { id },
+      include: { project: true },
+    });
+
+    if (!task) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+
+    if (role === "PROJECT_MANAGER" && task.project.createdById !== userId) {
+      const isMember = await prisma.project.findFirst({
+        where: { id: task.projectId, members: { some: { id: userId } } },
+      });
+      if (!isMember) {
+        return NextResponse.json({ error: "Access Denied" }, { status: 403 });
+      }
+    }
+
+    await prisma.task.delete({ where: { id } });
+
+    await prisma.activityLog.create({
+      data: {
+        userId,
+        actionDescription: `Task "${task.title}" deleted`,
+      },
+    });
+
+    return NextResponse.json({ message: "Task deleted" });
+  } catch (error) {
+    console.error("DELETE Task Exception:", error);
+    return NextResponse.json({ error: "Failed to delete task" }, { status: 500 });
   }
 });

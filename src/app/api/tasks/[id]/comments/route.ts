@@ -37,6 +37,17 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
       data: { text, taskId, authorId: userId },
       include: { author: { select: { id: true, name: true, avatar: true } } },
     });
+
+    const task = await prisma.task.findUnique({ where: { id: taskId }, select: { title: true } });
+    if (task) {
+      await prisma.activityLog.create({
+        data: {
+          userId,
+          actionDescription: `Comment added on task "${task.title}"`,
+        },
+      });
+    }
+
     return NextResponse.json(comment, { status: 201 });
   } catch (error) {
     console.error('POST Comment Error:', error);

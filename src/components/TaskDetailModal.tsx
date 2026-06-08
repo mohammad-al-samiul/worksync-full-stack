@@ -2,13 +2,15 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2, Upload, Image as ImageIcon, FileText } from "lucide-react";
+import { X, Loader2, Upload, Image as ImageIcon, FileText, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import { SubmitButton } from "@/components/SubmitButton";
+import { StyledSelect } from "@/components/StyledSelect";
 import { isImageAttachment } from "@/lib/attachment-utils";
+import { useAuth } from "@/context/AuthContext";
+import { canManageTasks, todayInputValue } from "@/lib/roles";
 
-// Types
 interface Task {
   id: string;
   title: string;
@@ -17,24 +19,40 @@ interface Task {
   priority: string;
   status: string;
   project?: { id: string; name: string };
-  assignedTo?: { id: string; name: string; avatar?: string };
+  assignedTo?: { id: string; name: string; avatar?: string; email?: string };
   comments?: Array<{ id: string; text: string; createdAt: string; author: { name: string; avatar?: string } }>;
-  attachments?: Array<{ id: string; name: string; url: string }>; 
+  attachments?: Array<{ id: string; name: string; url: string }>;
 }
 
 interface TaskDetailModalProps {
   taskId: string | null;
   open: boolean;
   onClose: () => void;
+  onChanged?: () => void;
 }
 
-export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailModalProps) {
+export default function TaskDetailModal({ taskId, open, onClose, onChanged }: TaskDetailModalProps) {
+  const { user } = useAuth();
+  const canEdit = user ? canManageTasks(user.role) : false;
+
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [uploadState, setUploadState] = useState<"idle" | "uploading" | "done">("idle");
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [previewFiles, setPreviewFiles] = useState<File[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    dueDate: "",
+    priority: "MEDIUM",
+    status: "TODO",
+    assignedToEmail: "",
+  });
 
   const fetchTask = useCallback(async (showLoading = true) => {
     if (!taskId) return;
@@ -42,8 +60,16 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
     try {
       const res = await apiFetch(`/api/tasks/${taskId}`);
       if (res.ok) {
-        const data = await res.json();
+        const data: Task = await res.json();
         setTask(data);
+        setEditForm({
+          title: data.title,
+          description: data.description || "",
+          dueDate: data.dueDate ? new Date(data.dueDate).toISOString().split("T")[0] : "",
+          priority: data.priority,
+          status: data.status,
+          assignedToEmail: data.assignedTo?.email || "",
+        });
       }
     } catch (e) {
       console.error(e);
@@ -54,10 +80,64 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
 
   useEffect(() => {
     if (!open || !taskId) return;
+    setIsEditing(false);
     void fetchTask();
   }, [open, taskId, fetchTask]);
 
-  // Post new comment
+  const handleSaveEdit = async () => {
+    if (!taskId) return;
+    setIsSaving(true);
+    try {
+      const payload: Record<string, string> = {
+        title: editForm.title,
+        description: editForm.description,
+        dueDate: editForm.dueDate,
+        priority: editForm.priority,
+        status: editForm.status,
+      };
+      if (editForm.assignedToEmail) {
+        payload.assignedToEmail = editForm.assignedToEmail;
+      }
+
+      const res = await apiFetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        setIsEditing(false);
+        await fetchTask(false);
+        onChanged?.();
+      } else {
+        const err = await res.json();
+        alert(err.error);
+      }
+    } catch {
+      alert("Could not save changes.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!taskId || !task) return;
+    if (!confirm(`Delete "${task.title}"? This cannot be undone.`)) return;
+    setIsDeleting(true);
+    try {
+      const res = await apiFetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+      if (res.ok) {
+        onChanged?.();
+        onClose();
+      } else {
+        const err = await res.json();
+        alert(err.error);
+      }
+    } catch {
+      alert("Could not delete task.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !taskId || isPostingComment) return;
@@ -81,12 +161,10 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
     }
   };
 
-  // Drag‑and‑drop handlers for attachments
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files);
-    if (!files.length) return;
-    setPreviewFiles(files);
+    if (files.length) setPreviewFiles(files);
   };
 
   const handleUpload = async () => {
@@ -101,9 +179,7 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
           method: "POST",
           body: formData,
         });
-        if (res.ok) {
-          uploaded.push(await res.json());
-        }
+        if (res.ok) uploaded.push(await res.json());
       }
       if (uploaded.length) {
         setPreviewFiles([]);
@@ -137,12 +213,34 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
           exit={{ scale: 0.9, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            className="absolute top-3 right-3 text-muted hover:text-foreground"
-            onClick={onClose}
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="absolute top-3 right-3 flex items-center gap-2">
+            {canEdit && task && !isEditing && (
+              <>
+                <button
+                  className="text-muted hover:text-cyan-accent p-1"
+                  onClick={() => setIsEditing(true)}
+                  title="Edit task"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  className="text-muted hover:text-rose-500 p-1"
+                  onClick={() => void handleDelete()}
+                  disabled={isDeleting}
+                  title="Delete task"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </button>
+              </>
+            )}
+            <button className="text-muted hover:text-foreground p-1" onClick={onClose}>
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
           {loading ? (
             <div className="flex justify-center py-12">
@@ -150,55 +248,144 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
             </div>
           ) : task ? (
             <div className="space-y-6">
-              {/* Header */}
-              <div className="flex items-center gap-4">
-                <h2 className="text-2xl font-bold text-foreground">{task.title}</h2>
-                <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium border", {
-                  "bg-green-500/10 text-green-500 border-green-500/30": task.status === "COMPLETED",
-                  "bg-cyan-accent/10 text-cyan-accent border-cyan-accent/30": task.status === "IN_PROGRESS",
-                  "bg-slate-400/10 text-slate-400 border-slate-400/30": task.status === "TODO",
-                })}>
-                  {task.status.replace("_", " ")}
-                </span>
-              </div>
-
-              {/* Details */}
-              <div className="space-y-2 text-sm text-muted">
-                {task.description && <p>{task.description}</p>}
-                {task.dueDate && (
-                  <p>Due: {new Date(task.dueDate).toLocaleDateString()}</p>
-                )}
-                {task.assignedTo && (
-                  <div className="flex items-center gap-2">
-                    {task.assignedTo.avatar ? (
-                      <img src={task.assignedTo.avatar} alt={task.assignedTo.name} className="h-6 w-6 rounded-full" />
-                    ) : (
-                      <div className="h-6 w-6 rounded-full bg-foreground/10" />
-                    )}
-                    <span>{task.assignedTo.name}</span>
+              {isEditing ? (
+                <div className="space-y-4">
+                  <h2 className="text-xl font-bold">Edit Task</h2>
+                  <div>
+                    <label className="text-xs text-muted uppercase font-semibold">Title</label>
+                    <input
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                      className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
+                    />
                   </div>
-                )}
-                {task.project && (
-                  <p>Project: {task.project.name}</p>
-                )}
-              </div>
+                  <div>
+                    <label className="text-xs text-muted uppercase font-semibold">Description</label>
+                    <textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm min-h-[70px]"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-muted uppercase font-semibold">Due Date</label>
+                      <input
+                        type="date"
+                        min={todayInputValue()}
+                        value={editForm.dueDate}
+                        onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
+                        className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted uppercase font-semibold">Priority</label>
+                      <StyledSelect
+                        variant="form"
+                        value={editForm.priority}
+                        onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}
+                        className="mt-1"
+                      >
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HIGH">High</option>
+                      </StyledSelect>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted uppercase font-semibold">Status</label>
+                      <StyledSelect
+                        variant="form"
+                        value={editForm.status}
+                        onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                        className="mt-1"
+                      >
+                        <option value="TODO">To Do</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="COMPLETED">Completed</option>
+                      </StyledSelect>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted uppercase font-semibold">Assignee Email</label>
+                      <input
+                        type="email"
+                        value={editForm.assignedToEmail}
+                        onChange={(e) => setEditForm({ ...editForm, assignedToEmail: e.target.value })}
+                        disabled={task.status === "COMPLETED"}
+                        className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <SubmitButton
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setIsEditing(false)}
+                      className="flex-1 text-sm py-2"
+                    >
+                      Cancel
+                    </SubmitButton>
+                    <SubmitButton
+                      isLoading={isSaving}
+                      loadingText="Saving..."
+                      variant="cyan"
+                      onClick={() => void handleSaveEdit()}
+                      className="flex-1 text-sm py-2"
+                    >
+                      Save Changes
+                    </SubmitButton>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-4 pr-16">
+                    <h2 className="text-2xl font-bold text-foreground">{task.title}</h2>
+                    <span
+                      className={cn("px-2 py-0.5 rounded-full text-xs font-medium border", {
+                        "bg-green-500/10 text-green-500 border-green-500/30": task.status === "COMPLETED",
+                        "bg-cyan-accent/10 text-cyan-accent border-cyan-accent/30": task.status === "IN_PROGRESS",
+                        "bg-slate-400/10 text-slate-400 border-slate-400/30": task.status === "TODO",
+                      })}
+                    >
+                      {task.status.replace("_", " ")}
+                    </span>
+                  </div>
 
-              {/* Comments */}
+                  <div className="space-y-2 text-sm text-muted">
+                    {task.description && <p>{task.description}</p>}
+                    {task.dueDate && <p>Due: {new Date(task.dueDate).toLocaleDateString()}</p>}
+                    <p>Priority: {task.priority}</p>
+                    {task.assignedTo && (
+                      <div className="flex items-center gap-2">
+                        {task.assignedTo.avatar ? (
+                          <img src={task.assignedTo.avatar} alt="" className="h-6 w-6 rounded-full" />
+                        ) : (
+                          <div className="h-6 w-6 rounded-full bg-foreground/10" />
+                        )}
+                        <span>{task.assignedTo.name}</span>
+                      </div>
+                    )}
+                    {task.project && <p>Project: {task.project.name}</p>}
+                  </div>
+                </>
+              )}
+
               <section className="border-t border-card-border pt-4">
                 <h3 className="font-semibold mb-2">Comments</h3>
                 <div className="space-y-3 max-h-60 overflow-y-auto mb-4">
-                  {task.comments && task.comments.length ? (
+                  {task.comments?.length ? (
                     task.comments.map((c) => (
                       <div key={c.id} className="flex items-start gap-3">
                         {c.author.avatar ? (
-                          <img src={c.author.avatar} alt={c.author.name} className="h-6 w-6 rounded-full" />
+                          <img src={c.author.avatar} alt="" className="h-6 w-6 rounded-full" />
                         ) : (
                           <div className="h-6 w-6 rounded-full bg-foreground/10" />
                         )}
                         <div className="flex-1">
                           <p className="text-xs font-medium text-foreground">{c.author.name}</p>
                           <p className="text-sm text-muted">{c.text}</p>
-                          <span className="text-[10px] text-muted/70">{new Date(c.createdAt).toLocaleTimeString()}</span>
+                          <span className="text-[10px] text-muted/70">
+                            {new Date(c.createdAt).toLocaleTimeString()}
+                          </span>
                         </div>
                       </div>
                     ))
@@ -210,7 +397,7 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
                   <textarea
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Add a comment..."
+                    placeholder="Write a comment..."
                     disabled={isPostingComment}
                     className="flex-1 bg-slate-900/30 border border-card-border rounded-xl p-2 text-sm focus:outline-none focus:border-cyan-accent disabled:opacity-60"
                     rows={2}
@@ -226,7 +413,6 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
                 </form>
               </section>
 
-              {/* Attachments */}
               <section className="border-t border-card-border pt-4">
                 <h3 className="font-semibold mb-2">
                   Attachments
@@ -251,11 +437,7 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
                         >
                           {isImage && !isBrokenMock ? (
                             <div className="relative aspect-video w-full overflow-hidden rounded-md bg-slate-900/60">
-                              <img
-                                src={a.url}
-                                alt={a.name}
-                                className="h-full w-full object-contain"
-                              />
+                              <img src={a.url} alt={a.name} className="h-full w-full object-contain" />
                             </div>
                           ) : (
                             <div className="flex h-16 items-center justify-center rounded-md bg-slate-900/60">
@@ -268,23 +450,15 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
                             ) : (
                               <FileText className="h-4 w-4 shrink-0 text-muted" />
                             )}
-                            <span className="truncate text-sm group-hover:text-cyan-accent">
-                              {a.name}
-                            </span>
+                            <span className="truncate text-sm group-hover:text-cyan-accent">{a.name}</span>
                           </div>
-                          {isBrokenMock ? (
-                            <span className="text-[10px] text-amber-500">
-                              Re-upload to preview
-                            </span>
-                          ) : null}
                         </a>
                       );
                     })}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted mb-4">No attachments yet.</p>
+                  <p className="text-sm text-muted mb-4">No files attached.</p>
                 )}
-                {/* Drag‑and‑drop area */}
                 <div
                   className={cn(
                     "mt-4 border border-dashed rounded-lg p-6 text-center text-muted hover:border-cyan-accent transition",
@@ -295,7 +469,7 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
                 >
                   {previewFiles.length ? (
                     <div className="space-y-2">
-                      <p>{previewFiles.length} file(s) ready to upload</p>
+                      <p>{previewFiles.length} file(s) ready</p>
                       <button
                         type="button"
                         className="px-4 py-2 bg-cyan-accent text-white rounded-lg hover:bg-cyan-accent/80"
@@ -313,7 +487,7 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
                   ) : (
                     <>
                       <Upload className="h-8 w-8 mx-auto mb-2" />
-                      <p>Drag & drop files here, or click to select</p>
+                      <p>Drop files here or browse</p>
                       <input
                         type="file"
                         multiple
@@ -324,7 +498,7 @@ export default function TaskDetailModal({ taskId, open, onClose }: TaskDetailMod
                         }}
                       />
                       <label htmlFor="file-upload-input" className="cursor-pointer text-cyan-accent underline">
-                        Browse files
+                        Choose files
                       </label>
                     </>
                   )}

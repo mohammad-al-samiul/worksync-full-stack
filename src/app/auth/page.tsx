@@ -97,11 +97,11 @@ export default function AuthPage() {
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
               Collaborate in the <br />
               <span className="bg-gradient-to-r from-cyan-accent to-purple-accent bg-clip-text text-transparent neon-text-cyan">
-                Cyber Workspace
+              One place for your team&apos;s projects and tasks
               </span>
             </h1>
             <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
-              Empower your engineering teams with unified task coordination, real-time analytics, and lightning-fast glassmorphic dashboards.
+              Plan projects, assign work, and see what everyone is up to — without jumping between five different tools.
             </p>
           </div>
 

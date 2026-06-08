@@ -50,6 +50,17 @@ export default function DashboardPage() {
   const [upcomingTasks, setUpcomingTasks] = useState<
     { id: string; title: string; deadline: string; priority: string }[]
   >([]);
+  const [highPriorityTasks, setHighPriorityTasks] = useState<
+    { id: string; title: string; deadline: string }[]
+  >([]);
+  const [projectSummaries, setProjectSummaries] = useState<
+    { id: string; name: string; pending: number; pct: number; deadlineNote: string }[]
+  >([]);
+  const [priorityChart, setPriorityChart] = useState([
+    { name: "High", value: 0, color: "#f43f5e" },
+    { name: "Medium", value: 0, color: "#f59e0b" },
+    { name: "Low", value: 0, color: "#10b981" },
+  ]);
   const [kpi, setKpi] = useState({
     projects: 0,
     tasks: 0,
@@ -105,6 +116,34 @@ export default function DashboardPage() {
           { name: "Completed", value: done, color: "#10b981" },
         ]);
 
+        setPriorityChart([
+          { name: "High", value: taskList.filter((t) => t.priority === "HIGH").length, color: "#f43f5e" },
+          { name: "Medium", value: taskList.filter((t) => t.priority === "MEDIUM").length, color: "#f59e0b" },
+          { name: "Low", value: taskList.filter((t) => t.priority === "LOW").length, color: "#10b981" },
+        ]);
+
+        const summaries = projectList.slice(0, 4).map((p) => {
+          const pTasks = taskList.filter((t) => t.project?.id === p.id || t.projectId === p.id);
+          const total = pTasks.length;
+          const completed = pTasks.filter((t) => t.status === "COMPLETED").length;
+          const pending = total - completed;
+          const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+          let deadlineNote = "No deadline set";
+          if (p.deadline) {
+            const diff = Math.ceil(
+              (new Date(p.deadline).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+            );
+            if (diff < 0) deadlineNote = "Past deadline";
+            else if (diff === 0) deadlineNote = "Due today";
+            else if (diff <= 7) deadlineNote = `Deadline in ${diff} day${diff > 1 ? "s" : ""}`;
+            else deadlineNote = `${pct}% completed`;
+          } else if (total > 0) {
+            deadlineNote = `${pct}% completed`;
+          }
+          return { id: p.id, name: p.name, pending, pct, deadlineNote };
+        });
+        setProjectSummaries(summaries);
+
         const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         setProgressTrend(
           days.map((name, i) => {
@@ -133,7 +172,7 @@ export default function DashboardPage() {
 
         if (actData?.length) {
           setRecentActivities(
-            actData.slice(0, 5).map((a) => ({
+            actData.slice(0, 8).map((a) => ({
               id: a.id,
               text: a.actionDescription,
               time: new Date(a.timestamp).toLocaleString(),
@@ -150,12 +189,23 @@ export default function DashboardPage() {
           taskList
             .filter((t) => t.dueDate && t.status !== "COMPLETED")
             .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-            .slice(0, 3)
+            .slice(0, 4)
             .map((t) => ({
               id: t.id,
               title: t.title,
               deadline: new Date(t.dueDate).toLocaleDateString(),
               priority: t.priority,
+            }))
+        );
+
+        setHighPriorityTasks(
+          taskList
+            .filter((t) => t.priority === "HIGH" && t.status !== "COMPLETED")
+            .slice(0, 4)
+            .map((t) => ({
+              id: t.id,
+              title: t.title,
+              deadline: t.dueDate ? new Date(t.dueDate).toLocaleDateString() : "No date",
             }))
         );
       } catch (error) {
@@ -204,7 +254,7 @@ export default function DashboardPage() {
           Dashboard
         </motion.h1>
         <motion.p variants={itemVariants} className="text-sm text-muted mt-1">
-          System overview and productivity metrics for your workspace.
+          Here&apos;s what&apos;s going on across your workspace.
         </motion.p>
       </div>
 
@@ -239,12 +289,12 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
         {/* Doughnut Chart */}
         <motion.div variants={itemVariants} className="rounded-2xl border border-card-border bg-card/45 glassmorphism p-5 flex flex-col">
           <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
-            <CheckCircle2 className="h-4 w-4 text-cyan-accent" /> Task Status Distribution
+            <CheckCircle2 className="h-4 w-4 text-cyan-accent" /> Task Status
           </h3>
           <div className="flex-1 min-h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -281,10 +331,48 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
+        {/* Priority Chart */}
+        <motion.div variants={itemVariants} className="rounded-2xl border border-card-border bg-card/45 glassmorphism p-5 flex flex-col">
+          <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
+            <AlertCircle className="h-4 w-4 text-rose-500" /> Tasks by Priority
+          </h3>
+          <div className="flex-1 min-h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={priorityChart}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={70}
+                  paddingAngle={5}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {priorityChart.map((entry, index) => (
+                    <Cell key={`pri-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <RechartsTooltip
+                  contentStyle={{ backgroundColor: "#0f172a", borderColor: "#1e293b", borderRadius: "8px", fontSize: "12px" }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex justify-center gap-3 mt-2">
+            {priorityChart.map((entry, idx) => (
+              <div key={idx} className="flex items-center gap-1.5 text-xs text-muted">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                {entry.name}
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
         {/* Area Chart */}
         <motion.div variants={itemVariants} className="lg:col-span-2 rounded-2xl border border-card-border bg-card/45 glassmorphism p-5 flex flex-col">
           <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
-            <Activity className="h-4 w-4 text-purple-accent" /> Project Progress Trend
+            <Activity className="h-4 w-4 text-purple-accent" /> Tasks Created This Week
           </h3>
           <div className="flex-1 min-h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -313,7 +401,7 @@ export default function DashboardPage() {
         {/* Bar Chart */}
         <motion.div variants={itemVariants} className="lg:col-span-2 rounded-2xl border border-card-border bg-card/45 glassmorphism p-5 flex flex-col">
            <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
-            <Zap className="h-4 w-4 text-emerald-accent" /> Member Workload Summary
+            <Zap className="h-4 w-4 text-emerald-accent" /> Team Workload
           </h3>
           <div className="flex-1 min-h-[250px]">
              <ResponsiveContainer width="100%" height="100%">
@@ -345,7 +433,7 @@ export default function DashboardPage() {
         {/* Activity Widget */}
         <motion.div variants={itemVariants} className="rounded-2xl border border-card-border bg-card/45 glassmorphism p-5">
            <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
-            <Clock className="h-4 w-4 text-sky-400" /> Recent Activity Log
+            <Clock className="h-4 w-4 text-sky-400" /> Recent Activity
           </h3>
           <div className="space-y-4 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-700 before:to-transparent">
             {recentActivities.map((activity, index) => (
@@ -365,23 +453,48 @@ export default function DashboardPage() {
         </motion.div>
       </div>
       
-      {/* Quick Actions / Shortcuts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-         <motion.div variants={itemVariants} className="rounded-2xl border border-card-border bg-card/45 glassmorphism p-5">
-            <h3 className="text-sm font-bold flex items-center gap-2 mb-4">
-              <Calendar className="h-4 w-4 text-rose-500" /> Upcoming Deadlines & High Priority
-            </h3>
-            <div className="space-y-3">
-              {upcomingTasks.map((task) => (
-                <div key={task.id} className="flex items-center justify-between p-3 rounded-xl border border-card-border bg-slate-900/50 hover:bg-slate-800/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <button className="h-5 w-5 rounded-full border border-slate-500 flex items-center justify-center hover:border-emerald-accent hover:text-emerald-accent transition-colors">
-                       <CheckCircle2 className="h-3 w-3 opacity-0 hover:opacity-100" />
-                    </button>
-                    <div>
-                      <p className="text-xs font-semibold">{task.title}</p>
-                      <p className="text-[10px] text-muted mt-0.5">{task.deadline}</p>
+      {/* Project summaries + deadlines */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <motion.div variants={itemVariants} className="lg:col-span-1 rounded-2xl border border-card-border bg-card/45 glassmorphism p-5">
+          <h3 className="text-sm font-bold flex items-center gap-2 mb-4">
+            <FolderKanban className="h-4 w-4 text-purple-accent" /> Project Overview
+          </h3>
+          <div className="space-y-3">
+            {projectSummaries.length === 0 ? (
+              <p className="text-xs text-muted">No projects yet.</p>
+            ) : (
+              projectSummaries.map((p) => (
+                <div key={p.id} className="p-3 rounded-xl border border-card-border bg-slate-900/50">
+                  <p className="text-xs font-semibold">{p.name}</p>
+                  <p className="text-[10px] text-muted mt-1">
+                    {p.pending > 0 ? `${p.pending} task${p.pending > 1 ? "s" : ""} pending` : "All caught up"}
+                    {" · "}
+                    {p.deadlineNote}
+                  </p>
+                  {p.pct > 0 && (
+                    <div className="mt-2 h-1 bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-purple-accent rounded-full" style={{ width: `${p.pct}%` }} />
                     </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="rounded-2xl border border-card-border bg-card/45 glassmorphism p-5">
+          <h3 className="text-sm font-bold flex items-center gap-2 mb-4">
+            <Calendar className="h-4 w-4 text-rose-500" /> Upcoming Deadlines
+          </h3>
+          <div className="space-y-3">
+            {upcomingTasks.length === 0 ? (
+              <p className="text-xs text-muted">Nothing due soon.</p>
+            ) : (
+              upcomingTasks.map((task) => (
+                <div key={task.id} className="flex items-center justify-between p-3 rounded-xl border border-card-border bg-slate-900/50">
+                  <div>
+                    <p className="text-xs font-semibold">{task.title}</p>
+                    <p className="text-[10px] text-muted mt-0.5">{task.deadline}</p>
                   </div>
                   <span className={cn(
                     "text-[9px] font-bold px-2 py-0.5 rounded-full border",
@@ -390,9 +503,28 @@ export default function DashboardPage() {
                     {task.priority}
                   </span>
                 </div>
-              ))}
-            </div>
-         </motion.div>
+              ))
+            )}
+          </div>
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="rounded-2xl border border-card-border bg-card/45 glassmorphism p-5">
+          <h3 className="text-sm font-bold flex items-center gap-2 mb-4">
+            <AlertCircle className="h-4 w-4 text-rose-500" /> High Priority Tasks
+          </h3>
+          <div className="space-y-3">
+            {highPriorityTasks.length === 0 ? (
+              <p className="text-xs text-muted">No high priority items open.</p>
+            ) : (
+              highPriorityTasks.map((task) => (
+                <div key={task.id} className="flex items-center justify-between p-3 rounded-xl border border-rose-500/20 bg-slate-900/50">
+                  <p className="text-xs font-semibold">{task.title}</p>
+                  <span className="text-[10px] text-muted">{task.deadline}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </motion.div>
       </div>
 
     </motion.div>

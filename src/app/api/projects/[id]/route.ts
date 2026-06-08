@@ -74,8 +74,23 @@ export const PUT = withRole(
         );
       }
 
-      // Build update mapping
-      const updateData: any = {};
+      if (deadline) {
+        const parsed = new Date(deadline);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        parsed.setHours(0, 0, 0, 0);
+        const existingDay = project.deadline
+          ? new Date(project.deadline).toDateString()
+          : null;
+        if (parsed < today && parsed.toDateString() !== existingDay) {
+          return NextResponse.json(
+            { error: "Please select a valid deadline." },
+            { status: 400 }
+          );
+        }
+      }
+
+      const updateData: Record<string, unknown> = {};
       if (name) updateData.name = name;
       if (description !== undefined) updateData.description = description;
       if (deadline !== undefined) updateData.deadline = deadline ? new Date(deadline) : null;
@@ -84,11 +99,21 @@ export const PUT = withRole(
       if (memberEmails && Array.isArray(memberEmails)) {
         const dbMembers = await prisma.user.findMany({
           where: { email: { in: memberEmails } },
-          select: { id: true },
+          select: { id: true, name: true },
         });
         updateData.members = {
           set: dbMembers.map((m) => ({ id: m.id })),
         };
+
+        const addedNames = dbMembers.map((m) => m.name).join(", ");
+        if (addedNames) {
+          await prisma.activityLog.create({
+            data: {
+              userId,
+              actionDescription: `Member added to "${project.name}" (${addedNames})`,
+            },
+          });
+        }
       }
 
       const updatedProject = await prisma.project.update({
@@ -102,7 +127,7 @@ export const PUT = withRole(
       await prisma.activityLog.create({
         data: {
           userId,
-          actionDescription: `Updated project configs: '${project.name}'`,
+          actionDescription: `Project "${project.name}" updated`,
         },
       });
 
@@ -148,7 +173,7 @@ export const DELETE = withRole(
       await prisma.activityLog.create({
         data: {
           userId,
-          actionDescription: `Deleted project: '${project.name}'`,
+          actionDescription: `Project "${project.name}" deleted`,
         },
       });
 

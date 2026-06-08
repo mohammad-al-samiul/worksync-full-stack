@@ -21,6 +21,8 @@ import { StyledSelect } from "@/components/StyledSelect";
 import { CyberDropdown } from "@/components/CyberDropdown";
 import { cn } from "@/lib/utils";
 import { apiFetch, parseJson, type PaginatedResponse } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { canManageTasks, todayInputValue } from "@/lib/roles";
 
 const taskSchema = z.object({
   title: z.string().min(3, "Task title must be at least 3 characters"),
@@ -60,6 +62,9 @@ const TASK_SORT_OPTIONS = [
 ];
 
 export default function TasksPage() {
+  const { user } = useAuth();
+  const canCreate = user ? canManageTasks(user.role) : false;
+
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
@@ -230,14 +235,20 @@ export default function TasksPage() {
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <CheckSquare className="text-cyan-accent" /> Tasks
           </h1>
-          <p className="text-sm text-muted mt-1">Manage, filter, and update your personal and team assignments.</p>
+          <p className="text-sm text-muted mt-1">
+            {canCreate
+              ? "Manage, filter, and update team assignments."
+              : "View and update tasks assigned to you."}
+          </p>
         </div>
+        {canCreate && (
         <button 
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 bg-cyan-accent hover:bg-cyan-accent/80 text-slate-950 px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-[0_0_15px_rgba(0,242,254,0.4)]"
         >
           <Plus className="h-4 w-4" /> New Task
         </button>
+        )}
       </div>
 
       {/* Advanced Filter Bar */}
@@ -389,6 +400,7 @@ export default function TasksPage() {
           taskId={selectedTaskId}
           open={taskModalOpen}
           onClose={() => setTaskModalOpen(false)}
+          onChanged={() => fetchTasks(1)}
         />
       )}
 
@@ -436,6 +448,7 @@ export default function TasksPage() {
                     <label className="text-xs font-semibold text-muted uppercase">Due Date</label>
                     <input
                       type="date"
+                      min={todayInputValue()}
                       {...register("dueDate")}
                       className="cyber-input w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-cyan-accent focus:outline-none text-slate-200"
                     />

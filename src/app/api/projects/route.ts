@@ -70,6 +70,19 @@ export const POST = withRole(
         return NextResponse.json({ error: "Project name is required" }, { status: 400 });
       }
 
+      if (deadline) {
+        const parsed = new Date(deadline);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        parsed.setHours(0, 0, 0, 0);
+        if (parsed < today) {
+          return NextResponse.json(
+            { error: "Please select a valid deadline." },
+            { status: 400 }
+          );
+        }
+      }
+
       // Convert member emails to IDs
       let connectMembers: { id: string }[] = [];
       if (memberEmails && Array.isArray(memberEmails) && memberEmails.length > 0) {
@@ -99,7 +112,7 @@ export const POST = withRole(
       await prisma.activityLog.create({
         data: {
           userId,
-          actionDescription: `Created new project pipeline: '${name}'`,
+          actionDescription: `Project "${name}" created`,
         },
       });
 

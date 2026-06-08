@@ -1,11 +1,14 @@
+
+
 datasource db {
   provider = "postgresql"
 }
 
 generator client {
   provider = "prisma-client-js"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
-
 enum Role {
   ADMIN
   PROJECT_MANAGER
@@ -89,6 +92,8 @@ model Task {
   // Sub-items
   comments    Comment[]
   attachments Attachment[]
+
+  @@unique([projectId, title])
 }
 
 model Comment {
