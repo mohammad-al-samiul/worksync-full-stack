@@ -4,7 +4,7 @@ Team project & task management app built with **Next.js 16**, **PostgreSQL**, an
 
 | | Link |
 |---|---|
-| **Live App** | [https://worksync-full-stack.vercel.app](https://worksync-full-stack.vercel.app) |
+| **Live App** | [Deploy on Vercel →](https://vercel.com/new/clone?repository-url=https://github.com/mohammad-al-samiul/worksync-full-stack&project-name=worksync-full-stack&env=DATABASE_URL,DIRECT_URL,JWT_SECRET) then open your `*.vercel.app` URL |
 | **GitHub** | [https://github.com/mohammad-al-samiul/worksync-full-stack](https://github.com/mohammad-al-samiul/worksync-full-stack) |
 | **Full Guide** | [GUIDE.md](./GUIDE.md) · [GUIDE.bn.md](./GUIDE.bn.md) (Bangla) |
 
@@ -161,17 +161,20 @@ Use [Supabase](https://supabase.com), [Neon](https://neon.tech), or [Railway](ht
 
 For Supabase, set both `DATABASE_URL` (pooler, port 6543) and `DIRECT_URL` (direct, port 5432).
 
-### Step 3 — Deploy on Vercel
+### Step 3 — Deploy on Vercel (fastest)
 
-1. Go to [vercel.com/new](https://vercel.com/new)
-2. Import `mohammad-al-samiul/worksync-full-stack`
-3. Add environment variables:
+**[→ One-click Vercel import](https://vercel.com/new/clone?repository-url=https://github.com/mohammad-al-samiul/worksync-full-stack&project-name=worksync-full-stack)**
+
+1. Sign in with GitHub
+2. Add environment variables (from your `.env` or Supabase dashboard):
    - `DATABASE_URL`
-   - `DIRECT_URL` (if using Supabase)
-   - `JWT_SECRET` (generate a random 32+ char string)
-4. Click **Deploy**
+   - `DIRECT_URL` (Supabase only)
+   - `JWT_SECRET`
+3. Click **Deploy**
 
-The build runs `prisma generate`, `prisma migrate deploy`, and `next build` automatically.
+Your live URL will look like: `https://worksync-full-stack.vercel.app`
+
+> If you already seeded the production database (see Step 4), demo login works immediately after deploy.
 
 ### Step 4 — Seed production database
 
