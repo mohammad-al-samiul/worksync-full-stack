@@ -104,8 +104,8 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <BarChart3 className="h-6 w-6 text-emerald-accent" />
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-accent shrink-0" />
           Analytics
         </h1>
         <p className="text-xs text-muted mt-1">

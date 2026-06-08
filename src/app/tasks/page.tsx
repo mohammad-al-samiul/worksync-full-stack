@@ -18,6 +18,7 @@ import TaskDetailModal from "@/components/TaskDetailModal";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ActionOverlay } from "@/components/ActionOverlay";
 import { StyledSelect } from "@/components/StyledSelect";
+import { FormField, formInputClass } from "@/components/FormField";
 import { CyberDropdown } from "@/components/CyberDropdown";
 import { cn } from "@/lib/utils";
 import { apiFetch, parseJson, type PaginatedResponse } from "@/lib/api";
@@ -230,10 +231,10 @@ export default function TasksPage() {
   return (
     <div className="space-y-6">
       {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <CheckSquare className="text-cyan-accent" /> Tasks
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
+            <CheckSquare className="text-cyan-accent shrink-0" /> Tasks
           </h1>
           <p className="text-sm text-muted mt-1">
             {canCreate
@@ -244,7 +245,7 @@ export default function TasksPage() {
         {canCreate && (
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-cyan-accent hover:bg-cyan-accent/80 text-slate-950 px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-[0_0_15px_rgba(0,242,254,0.4)]"
+          className="flex items-center justify-center gap-2 bg-cyan-accent hover:bg-cyan-accent/80 text-slate-950 px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-[0_0_15px_rgba(0,242,254,0.4)] w-full sm:w-auto shrink-0"
         >
           <Plus className="h-4 w-4" /> New Task
         </button>
@@ -318,7 +319,7 @@ export default function TasksPage() {
                     setTaskModalOpen(true);
                   }}
                   className={cn(
-                    "bg-card/45 glassmorphism border p-5 rounded-2xl transition-all cursor-pointer",
+                    "bg-card/45 glassmorphism border p-4 sm:p-5 rounded-2xl transition-all cursor-pointer",
                     isOverdue ? "border-rose-500/50 shadow-[0_0_10px_rgba(244,63,94,0.1)]" : "border-card-border hover:border-cyan-accent/50"
                   )}
                 >
@@ -406,11 +407,11 @@ export default function TasksPage() {
 
       {/* Create Task Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative bg-slate-900 border border-card-border rounded-2xl p-6 w-full max-w-lg shadow-2xl"
+            className="relative bg-slate-900 border border-card-border rounded-2xl p-4 sm:p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto"
           >
             <ActionOverlay show={isCreating} label="Creating task..." />
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -420,63 +421,53 @@ export default function TasksPage() {
               onSubmit={handleSubmit(onSubmit)}
               className={cn("space-y-4", isCreating && "pointer-events-none opacity-80")}
             >
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="text-xs font-semibold text-muted uppercase">Task Title</label>
-                    <input 
-                      {...register("title")}
-                      className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-cyan-accent focus:outline-none"
-                    />
-                    {errors.title && <p className="text-rose-500 text-[10px] mt-1">{errors.title.message}</p>}
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <label className="text-xs font-semibold text-muted uppercase">Project</label>
-                    <StyledSelect variant="form" {...register("projectId")} className="mt-1">
-                      <option value="">Select a project...</option>
-                      {projects.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </StyledSelect>
-                    {errors.projectId && <p className="text-rose-500 text-[10px] mt-1">{errors.projectId.message}</p>}
-                  </div>
+              <FormField label="Task Title" error={errors.title?.message}>
+                <input {...register("title")} className={formInputClass("cyan")} />
+              </FormField>
 
-                  <div>
-                    <label className="text-xs font-semibold text-muted uppercase">Due Date</label>
-                    <input
-                      type="date"
-                      min={todayInputValue()}
-                      {...register("dueDate")}
-                      className="cyber-input w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-cyan-accent focus:outline-none text-slate-200"
-                    />
-                    {errors.dueDate && <p className="text-rose-500 text-[10px] mt-1">{errors.dueDate.message}</p>}
-                  </div>
+              <FormField label="Project" error={errors.projectId?.message}>
+                <StyledSelect variant="form" {...register("projectId")}>
+                  <option value="">Select a project...</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </StyledSelect>
+              </FormField>
 
-                  <div>
-                    <label className="text-xs font-semibold text-muted uppercase">Priority</label>
-                    <StyledSelect variant="form" {...register("priority")} className="mt-1">
-                      <option value="LOW">Low</option>
-                      <option value="MEDIUM">Medium</option>
-                      <option value="HIGH">High</option>
-                    </StyledSelect>
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <label className="text-xs font-semibold text-muted uppercase">Assignee Email (Optional)</label>
-                    <input 
-                      type="email"
-                      {...register("assignedToEmail")}
-                      placeholder="e.g. member@worksync.com"
-                      className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-cyan-accent focus:outline-none"
-                    />
-                    {errors.assignedToEmail && <p className="text-rose-500 text-[10px] mt-1">{errors.assignedToEmail.message}</p>}
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField label="Due Date" error={errors.dueDate?.message}>
+                  <input
+                    type="date"
+                    min={todayInputValue()}
+                    {...register("dueDate")}
+                    className={cn(formInputClass("cyan"), "cyber-input")}
+                  />
+                </FormField>
+                <FormField label="Priority">
+                  <StyledSelect variant="form" {...register("priority")}>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                  </StyledSelect>
+                </FormField>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <FormField
+                label="Assignee Email"
+                error={errors.assignedToEmail?.message}
+                hint="Optional — leave blank to keep unassigned."
+              >
+                <input
+                  type="email"
+                  {...register("assignedToEmail")}
+                  placeholder="member@worksync.io"
+                  className={formInputClass("cyan")}
+                />
+              </FormField>
+
+              <div className="flex gap-3 pt-2">
                 <SubmitButton
                   type="button"
                   variant="ghost"

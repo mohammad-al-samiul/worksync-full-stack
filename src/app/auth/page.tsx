@@ -87,14 +87,14 @@ export default function AuthPage() {
 
       <div className="w-full max-w-5xl flex flex-col md:flex-row items-stretch justify-center gap-6 md:gap-0 z-10">
         {/* Brand Showcase Panel (Left) */}
-        <div className="flex-1 rounded-t-2xl md:rounded-t-none md:rounded-l-2xl border-t border-x md:border-y md:border-l border-purple-accent/20 bg-slate-950/45 glassmorphism p-8 md:p-12 flex flex-col justify-between overflow-hidden relative">
+        <div className="flex-1 rounded-t-2xl md:rounded-t-none md:rounded-l-2xl border-t border-x md:border-y md:border-l border-purple-accent/20 bg-slate-950/45 glassmorphism p-6 sm:p-8 md:p-12 flex flex-col justify-between overflow-hidden relative">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-accent/5 to-transparent pointer-events-none" />
           
           <WorkSyncLogo size="lg" className="relative z-10" />
 
           {/* Slogan */}
-          <div className="my-12 space-y-4 relative z-10">
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
+          <div className="my-6 sm:my-12 space-y-4 relative z-10">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
               Collaborate in the <br />
               <span className="bg-gradient-to-r from-cyan-accent to-purple-accent bg-clip-text text-transparent neon-text-cyan">
               One place for your team&apos;s projects and tasks
@@ -123,7 +123,7 @@ export default function AuthPage() {
         </div>
 
         {/* Form Console Panel (Right) */}
-        <div className="flex-1 rounded-b-2xl md:rounded-b-none md:rounded-r-2xl border-b border-x md:border-y md:border-r border-cyan-accent/20 bg-slate-900/50 glassmorphism p-8 md:p-12 flex flex-col justify-center relative shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <div className="flex-1 rounded-b-2xl md:rounded-b-none md:rounded-r-2xl border-b border-x md:border-y md:border-r border-cyan-accent/20 bg-slate-900/50 glassmorphism p-6 sm:p-8 md:p-12 flex flex-col justify-center relative shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-accent/5 to-transparent pointer-events-none" />
 
           {/* Tab Switcher */}
@@ -249,7 +249,7 @@ export default function AuthPage() {
             <p className="text-[10px] text-slate-400 text-center font-medium leading-none">
               Click to autofill credentials and initialize role console
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {(["Admin", "Manager", "Member"] as UserRole[]).map((r) => (
                 <button
                   key={r}

@@ -3,7 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Variant = "cyan" | "purple" | "gradient" | "ghost";
+type Variant = "cyan" | "purple" | "gradient" | "ghost" | "danger";
 
 const variantStyles: Record<Variant, string> = {
   cyan: "bg-cyan-accent hover:bg-cyan-accent/80 text-slate-950 shadow-[0_0_12px_rgba(0,242,254,0.2)]",
@@ -12,6 +12,8 @@ const variantStyles: Record<Variant, string> = {
   gradient:
     "bg-gradient-to-r from-cyan-accent to-purple-accent text-slate-950 shadow-md shadow-cyan-accent/15",
   ghost: "bg-slate-800 hover:bg-slate-700 text-foreground",
+  danger:
+    "bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_12px_rgba(244,63,94,0.25)]",
 };
 
 type SubmitButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {

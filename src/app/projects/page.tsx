@@ -19,6 +19,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { ActionOverlay } from "@/components/ActionOverlay";
 import { CyberDropdown } from "@/components/CyberDropdown";
 import { StyledSelect } from "@/components/StyledSelect";
+import { FormField, formInputClass, formTextareaClass } from "@/components/FormField";
+import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
 import { cn } from "@/lib/utils";
 import { apiFetch, parseJson, type PaginatedResponse } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -84,6 +86,8 @@ export default function ProjectsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -182,11 +186,13 @@ export default function ProjectsPage() {
     }
   };
 
-  const handleDelete = async (project: Project) => {
-    if (!confirm(`Delete "${project.name}"? All tasks under it will be removed too.`)) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
     try {
-      const res = await apiFetch(`/api/projects/${project.id}`, { method: "DELETE" });
+      const res = await apiFetch(`/api/projects/${deleteTarget.id}`, { method: "DELETE" });
       if (res.ok) {
+        setDeleteTarget(null);
         await fetchProjects(1);
       } else {
         const err = await res.json();
@@ -194,6 +200,8 @@ export default function ProjectsPage() {
       }
     } catch {
       alert("Could not delete project.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -244,10 +252,10 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <FolderKanban className="text-purple-accent" /> Projects
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
+            <FolderKanban className="text-purple-accent shrink-0" /> Projects
           </h1>
           <p className="text-sm text-muted mt-1">
             Keep track of what your team is working on.
@@ -256,7 +264,7 @@ export default function ProjectsPage() {
         {canManage && (
           <button
             onClick={openCreate}
-            className="flex items-center gap-2 bg-purple-accent hover:bg-purple-accent/80 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-[0_0_15px_rgba(157,78,221,0.4)]"
+            className="flex items-center justify-center gap-2 bg-purple-accent hover:bg-purple-accent/80 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-[0_0_15px_rgba(157,78,221,0.4)] w-full sm:w-auto shrink-0"
           >
             <Plus className="h-4 w-4" /> New Project
           </button>
@@ -320,12 +328,12 @@ export default function ProjectsPage() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   onClick={() => canManage && openEdit(project)}
                   className={cn(
-                    "bg-card/45 glassmorphism border border-card-border p-6 rounded-2xl hover:border-purple-accent/50 transition-colors group",
+                    "bg-card/45 glassmorphism border border-card-border p-4 sm:p-6 rounded-2xl hover:border-purple-accent/50 transition-colors group",
                     canManage && "cursor-pointer"
                   )}
                 >
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="font-bold text-lg leading-tight group-hover:text-purple-accent transition-colors">
+                    <h3 className="font-bold text-base sm:text-lg leading-tight group-hover:text-purple-accent transition-colors truncate pr-2">
                       {project.name}
                     </h3>
                     <div className="flex items-center gap-2">
@@ -341,9 +349,9 @@ export default function ProjectsPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            void handleDelete(project);
+                            setDeleteTarget(project);
                           }}
-                          className="p-1 rounded-md text-muted hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="p-1.5 rounded-md text-muted hover:text-rose-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                           title="Delete project"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -415,12 +423,23 @@ export default function ProjectsPage() {
         </SubmitButton>
       )}
 
+      <ConfirmDeleteModal
+        open={!!deleteTarget}
+        onClose={() => !isDeleting && setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        itemName={deleteTarget?.name ?? ""}
+        title="Delete this project?"
+        description="All tasks under this project will be removed permanently."
+        isLoading={isDeleting}
+        confirmLabel="Delete Project"
+      />
+
       {isModalOpen && canManage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative bg-slate-900 border border-card-border rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
+            className="relative bg-slate-900 border border-card-border rounded-2xl p-4 sm:p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
           >
             <ActionOverlay
               show={isSaving}
@@ -441,63 +460,47 @@ export default function ProjectsPage() {
               onSubmit={handleSubmit(onSubmit)}
               className={cn("space-y-4", isSaving && "pointer-events-none opacity-80")}
             >
-              <div>
-                <label className="text-xs font-semibold text-muted uppercase">Name</label>
-                <input
-                  {...register("name")}
-                  className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-purple-accent focus:outline-none"
-                />
-                {errors.name && (
-                  <p className="text-rose-500 text-xs mt-1">{errors.name.message}</p>
-                )}
-              </div>
+              <FormField label="Name" error={errors.name?.message}>
+                <input {...register("name")} className={formInputClass("purple")} />
+              </FormField>
 
-              <div>
-                <label className="text-xs font-semibold text-muted uppercase">Description</label>
+              <FormField label="Description">
                 <textarea
                   {...register("description")}
-                  className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-purple-accent focus:outline-none min-h-[80px]"
+                  className={formTextareaClass("purple")}
                 />
-              </div>
+              </FormField>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-muted uppercase">Deadline</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField label="Deadline" error={errors.deadline?.message}>
                   <input
                     type="date"
                     min={todayInputValue()}
                     {...register("deadline")}
-                    className="cyber-input w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-purple-accent focus:outline-none text-slate-200"
+                    className={cn(formInputClass("purple"), "cyber-input")}
                   />
-                  {errors.deadline && (
-                    <p className="text-rose-500 text-xs mt-1">{errors.deadline.message}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted uppercase">Status</label>
-                  <StyledSelect variant="form" {...register("status")} className="mt-1">
+                </FormField>
+                <FormField label="Status">
+                  <StyledSelect variant="form" {...register("status")}>
                     <option value="ACTIVE">Active</option>
                     <option value="COMPLETED">Completed</option>
                     <option value="ON_HOLD">On Hold</option>
                   </StyledSelect>
-                </div>
+                </FormField>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-muted uppercase">
-                  Team Members (emails, comma separated)
-                </label>
+              <FormField
+                label="Team Members"
+                hint="Comma-separated emails. Only registered users can be added."
+              >
                 <input
                   {...register("memberEmails")}
                   placeholder="member@worksync.io, manager@worksync.io"
-                  className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm focus:border-purple-accent focus:outline-none"
+                  className={formInputClass("purple")}
                 />
-                <p className="text-[10px] text-muted mt-1">
-                  Only registered users can be added.
-                </p>
-              </div>
+              </FormField>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2">
                 <SubmitButton
                   type="button"
                   variant="ghost"

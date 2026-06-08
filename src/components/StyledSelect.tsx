@@ -9,7 +9,7 @@ type SelectVariant = "filter" | "form" | "status" | "inline";
 const variantStyles: Record<SelectVariant, string> = {
   filter:
     "min-w-[130px] rounded-xl border border-card-border bg-slate-900/50 px-3 py-2 pr-9 text-sm text-foreground",
-  form: "w-full rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 pr-10 text-sm text-foreground",
+  form: "h-10 w-full rounded-xl border border-slate-800 bg-slate-950 px-4 pr-10 text-sm text-foreground",
   status:
     "min-w-[100px] rounded-md border bg-slate-900 px-2 py-1 pr-7 text-[10px] font-bold uppercase tracking-wider",
   inline:
@@ -27,7 +27,13 @@ export const StyledSelect = forwardRef<HTMLSelectElement, StyledSelectProps>(
     ref
   ) {
     return (
-      <div className={cn("relative inline-flex max-w-full", wrapperClassName)}>
+      <div
+        className={cn(
+          "relative",
+          variant === "form" ? "block w-full" : "inline-flex max-w-full",
+          wrapperClassName
+        )}
+      >
         <select
           ref={ref}
           disabled={disabled}

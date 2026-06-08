@@ -124,7 +124,7 @@ export default function Header({ onToggleMobileSidebar }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between px-6 border-b glassmorphism bg-header border-card-border shadow-sm">
+    <header className="sticky top-0 z-20 flex h-14 sm:h-16 w-full items-center justify-between px-3 sm:px-4 md:px-6 border-b glassmorphism bg-header border-card-border shadow-sm">
       {/* Mobile Toggle & Brand */}
       <div className="flex items-center gap-4">
         <button
@@ -141,7 +141,7 @@ export default function Header({ onToggleMobileSidebar }: HeaderProps) {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* Theme Toggler */}
         <button
           onClick={toggleTheme}
@@ -197,7 +197,7 @@ export default function Header({ onToggleMobileSidebar }: HeaderProps) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 15, scale: 0.95 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="absolute right-0 mt-2.5 w-80 rounded-xl border border-card-border bg-card/95 glassmorphism shadow-xl p-4 overflow-hidden"
+                className="fixed left-3 right-3 top-[4.25rem] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2.5 sm:w-80 rounded-xl border border-card-border bg-card/95 glassmorphism shadow-xl p-4 overflow-hidden z-50"
               >
                 <div className="flex items-center justify-between border-b border-card-border/50 pb-2.5 mb-2">
                   <h3 className="font-semibold text-sm">Notifications</h3>
@@ -267,7 +267,7 @@ export default function Header({ onToggleMobileSidebar }: HeaderProps) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 15, scale: 0.95 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="absolute right-0 mt-2.5 w-60 rounded-xl border border-card-border bg-card/95 glassmorphism shadow-xl p-3"
+                className="fixed left-3 right-3 top-[4.25rem] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2.5 sm:w-60 rounded-xl border border-card-border bg-card/95 glassmorphism shadow-xl p-3 z-50"
               >
                 <div className="flex items-center gap-3 p-2 border-b border-card-border/50 pb-3 mb-2">
                   <img

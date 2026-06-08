@@ -175,7 +175,7 @@ export default function ActivityPage() {
       </div>
 
       {/* Timeline List */}
-      <div className="space-y-3.5 relative before:absolute before:left-12 before:top-4 before:bottom-4 before:w-0.5 before:bg-card-border/30">
+      <div className="space-y-3.5 relative before:absolute before:left-4 sm:before:left-12 before:top-4 before:bottom-4 before:w-0.5 before:bg-card-border/30">
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-cyan-accent" />
@@ -190,10 +190,11 @@ export default function ActivityPage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
               className={cn(
-                "p-4 rounded-xl border bg-card/35 glassmorphism hover:bg-card/50 transition-all duration-300 flex items-start gap-4 shadow-sm",
+                "p-3 sm:p-4 rounded-xl border bg-card/35 glassmorphism hover:bg-card/50 transition-all duration-300 flex flex-col sm:flex-row items-start gap-3 sm:gap-4 shadow-sm",
                 getBorderColor(act.type)
               )}
             >
+              <div className="flex items-start gap-3 sm:gap-4 w-full pl-8 sm:pl-0">
               {/* Timeline Time Marker */}
               <span className="hidden sm:block text-[10px] text-muted/65 font-bold w-16 text-right shrink-0 pt-1">
                 {act.time}
@@ -208,7 +209,7 @@ export default function ActivityPage() {
               <img
                 src={act.avatar}
                 alt={act.user}
-                className="h-8.5 w-8.5 rounded-lg border border-card-border/80 object-cover shrink-0 bg-slate-900"
+                className="hidden sm:block h-8.5 w-8.5 rounded-lg border border-card-border/80 object-cover shrink-0 bg-slate-900"
               />
 
               {/* Text Description */}
@@ -232,6 +233,7 @@ export default function ActivityPage() {
                   )}
                   <span className="sm:hidden text-muted/60">• {act.time}</span>
                 </div>
+              </div>
               </div>
             </motion.div>
           ))}

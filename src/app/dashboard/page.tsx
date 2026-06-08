@@ -250,7 +250,7 @@ export default function DashboardPage() {
     >
       {/* Header */}
       <div>
-        <motion.h1 variants={itemVariants} className="text-3xl font-bold tracking-tight">
+        <motion.h1 variants={itemVariants} className="text-2xl sm:text-3xl font-bold tracking-tight">
           Dashboard
         </motion.h1>
         <motion.p variants={itemVariants} className="text-sm text-muted mt-1">
@@ -259,7 +259,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {[
           { title: "Total Projects", value: String(kpi.projects), icon: FolderKanban, color: "text-purple-accent", bg: "bg-purple-accent/10" },
           { title: "Total Tasks", value: String(kpi.tasks), icon: Activity, color: "text-cyan-accent", bg: "bg-cyan-accent/10" },
@@ -271,7 +271,7 @@ export default function DashboardPage() {
             key={index}
             variants={itemVariants}
             className={cn(
-              "relative overflow-hidden rounded-2xl border bg-card/45 glassmorphism p-5 transition-all hover:bg-card/60",
+              "relative overflow-hidden rounded-2xl border bg-card/45 glassmorphism p-4 sm:p-5 transition-all hover:bg-card/60",
               kpiCard.glow ? "border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.15)] animate-pulse-slow" : "border-card-border"
             )}
           >
@@ -296,7 +296,7 @@ export default function DashboardPage() {
           <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
             <CheckCircle2 className="h-4 w-4 text-cyan-accent" /> Task Status
           </h3>
-          <div className="flex-1 min-h-[250px]">
+          <div className="flex-1 min-h-[200px] sm:min-h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -336,7 +336,7 @@ export default function DashboardPage() {
           <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
             <AlertCircle className="h-4 w-4 text-rose-500" /> Tasks by Priority
           </h3>
-          <div className="flex-1 min-h-[250px]">
+          <div className="flex-1 min-h-[200px] sm:min-h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -374,7 +374,7 @@ export default function DashboardPage() {
           <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
             <Activity className="h-4 w-4 text-purple-accent" /> Tasks Created This Week
           </h3>
-          <div className="flex-1 min-h-[250px]">
+          <div className="flex-1 min-h-[200px] sm:min-h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={progressTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
@@ -403,7 +403,7 @@ export default function DashboardPage() {
            <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
             <Zap className="h-4 w-4 text-emerald-accent" /> Team Workload
           </h3>
-          <div className="flex-1 min-h-[250px]">
+          <div className="flex-1 min-h-[200px] sm:min-h-[250px]">
              <ResponsiveContainer width="100%" height="100%">
               <BarChart data={workload} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
@@ -435,13 +435,13 @@ export default function DashboardPage() {
            <h3 className="text-sm font-bold flex items-center gap-2 mb-6">
             <Clock className="h-4 w-4 text-sky-400" /> Recent Activity
           </h3>
-          <div className="space-y-4 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-700 before:to-transparent">
-            {recentActivities.map((activity, index) => (
-               <div key={activity.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                  <div className="flex items-center justify-center w-5 h-5 rounded-full border border-card-border bg-slate-900 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow shadow-slate-900 z-10">
+          <div className="space-y-3 sm:space-y-4">
+            {recentActivities.map((activity) => (
+               <div key={activity.id} className="relative flex items-start gap-3 sm:gap-4 pl-4 sm:pl-0">
+                  <div className="absolute left-0 sm:relative flex items-center justify-center w-5 h-5 rounded-full border border-card-border bg-slate-900 shrink-0 shadow shadow-slate-900 z-10 mt-1 sm:mt-0">
                       <div className="w-1.5 h-1.5 bg-sky-400 rounded-full"></div>
                   </div>
-                  <div className="w-[calc(100%-2rem)] md:w-[calc(50%-1.5rem)] p-3 rounded-xl border border-card-border bg-slate-900/40 shadow">
+                  <div className="flex-1 min-w-0 p-3 rounded-xl border border-card-border bg-slate-900/40 shadow">
                       <div className="flex items-center justify-between mb-1">
                           <time className="text-[9px] font-bold text-sky-400 uppercase tracking-wider">{activity.time}</time>
                       </div>

@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import { SubmitButton } from "@/components/SubmitButton";
 import { StyledSelect } from "@/components/StyledSelect";
+import { FormField, formInputClass, formTextareaClass } from "@/components/FormField";
+import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
 import { isImageAttachment } from "@/lib/attachment-utils";
 import { useAuth } from "@/context/AuthContext";
 import { canManageTasks, todayInputValue } from "@/lib/roles";
@@ -44,6 +46,7 @@ export default function TaskDetailModal({ taskId, open, onClose, onChanged }: Ta
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [editForm, setEditForm] = useState({
     title: "",
@@ -81,6 +84,7 @@ export default function TaskDetailModal({ taskId, open, onClose, onChanged }: Ta
   useEffect(() => {
     if (!open || !taskId) return;
     setIsEditing(false);
+    setShowDeleteConfirm(false);
     void fetchTask();
   }, [open, taskId, fetchTask]);
 
@@ -120,11 +124,11 @@ export default function TaskDetailModal({ taskId, open, onClose, onChanged }: Ta
 
   const handleDelete = async () => {
     if (!taskId || !task) return;
-    if (!confirm(`Delete "${task.title}"? This cannot be undone.`)) return;
     setIsDeleting(true);
     try {
       const res = await apiFetch(`/api/tasks/${taskId}`, { method: "DELETE" });
       if (res.ok) {
+        setShowDeleteConfirm(false);
         onChanged?.();
         onClose();
       } else {
@@ -200,14 +204,14 @@ export default function TaskDetailModal({ taskId, open, onClose, onChanged }: Ta
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
       >
         <motion.div
-          className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto glassmorphism border border-card-border bg-card/80 p-6 rounded-2xl shadow-2xl"
+          className="relative w-full max-w-2xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto glassmorphism border border-card-border bg-card/80 p-4 sm:p-6 rounded-2xl shadow-2xl"
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
@@ -224,8 +228,8 @@ export default function TaskDetailModal({ taskId, open, onClose, onChanged }: Ta
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button
-                  className="text-muted hover:text-rose-500 p-1"
-                  onClick={() => void handleDelete()}
+                  className="text-muted hover:text-rose-500 p-1.5"
+                  onClick={() => setShowDeleteConfirm(true)}
                   disabled={isDeleting}
                   title="Delete task"
                 >
@@ -249,73 +253,71 @@ export default function TaskDetailModal({ taskId, open, onClose, onChanged }: Ta
           ) : task ? (
             <div className="space-y-6">
               {isEditing ? (
-                <div className="space-y-4">
+                <div className="space-y-4 pr-8">
                   <h2 className="text-xl font-bold">Edit Task</h2>
-                  <div>
-                    <label className="text-xs text-muted uppercase font-semibold">Title</label>
+
+                  <FormField label="Title">
                     <input
                       value={editForm.title}
                       onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                      className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
+                      className={formInputClass("cyan")}
                     />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted uppercase font-semibold">Description</label>
+                  </FormField>
+
+                  <FormField label="Description">
                     <textarea
                       value={editForm.description}
                       onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                      className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm min-h-[70px]"
+                      className={formTextareaClass("cyan")}
                     />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-muted uppercase font-semibold">Due Date</label>
+                  </FormField>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Due Date">
                       <input
                         type="date"
                         min={todayInputValue()}
                         value={editForm.dueDate}
                         onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
-                        className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm"
+                        className={cn(formInputClass("cyan"), "cyber-input")}
                       />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted uppercase font-semibold">Priority</label>
+                    </FormField>
+                    <FormField label="Priority">
                       <StyledSelect
                         variant="form"
                         value={editForm.priority}
                         onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}
-                        className="mt-1"
                       >
                         <option value="LOW">Low</option>
                         <option value="MEDIUM">Medium</option>
                         <option value="HIGH">High</option>
                       </StyledSelect>
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted uppercase font-semibold">Status</label>
+                    </FormField>
+                    <FormField label="Status">
                       <StyledSelect
                         variant="form"
                         value={editForm.status}
                         onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                        className="mt-1"
                       >
                         <option value="TODO">To Do</option>
                         <option value="IN_PROGRESS">In Progress</option>
                         <option value="COMPLETED">Completed</option>
                       </StyledSelect>
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted uppercase font-semibold">Assignee Email</label>
+                    </FormField>
+                    <FormField label="Assignee Email">
                       <input
                         type="email"
                         value={editForm.assignedToEmail}
-                        onChange={(e) => setEditForm({ ...editForm, assignedToEmail: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, assignedToEmail: e.target.value })
+                        }
                         disabled={task.status === "COMPLETED"}
-                        className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm disabled:opacity-50"
+                        className={formInputClass("cyan")}
                       />
-                    </div>
+                    </FormField>
                   </div>
-                  <div className="flex gap-2 pt-2">
+
+                  <div className="flex gap-3 pt-2">
                     <SubmitButton
                       type="button"
                       variant="ghost"
@@ -337,8 +339,8 @@ export default function TaskDetailModal({ taskId, open, onClose, onChanged }: Ta
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-4 pr-16">
-                    <h2 className="text-2xl font-bold text-foreground">{task.title}</h2>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 pr-10 sm:pr-16">
+                    <h2 className="text-xl sm:text-2xl font-bold text-foreground break-words">{task.title}</h2>
                     <span
                       className={cn("px-2 py-0.5 rounded-full text-xs font-medium border", {
                         "bg-green-500/10 text-green-500 border-green-500/30": task.status === "COMPLETED",
@@ -510,6 +512,17 @@ export default function TaskDetailModal({ taskId, open, onClose, onChanged }: Ta
           )}
         </motion.div>
       </motion.div>
+
+      <ConfirmDeleteModal
+        open={showDeleteConfirm}
+        onClose={() => !isDeleting && setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        itemName={task?.title ?? ""}
+        title="Delete this task?"
+        description="This task and its comments will be removed permanently."
+        isLoading={isDeleting}
+        confirmLabel="Delete Task"
+      />
     </AnimatePresence>
   );
 }

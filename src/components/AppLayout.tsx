@@ -62,7 +62,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col w-full bg-background text-foreground cyber-mesh cyber-grid">
+    <div className="min-h-screen flex flex-col w-full overflow-x-hidden bg-background text-foreground cyber-mesh cyber-grid">
       {/* Desktop Sidebar */}
       <div className="hidden md:block">
         <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
@@ -88,7 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
               className="fixed top-0 bottom-0 left-0 z-50 w-[260px] md:hidden"
             >
-              <Sidebar isCollapsed={false} setIsCollapsed={() => {}} />
+              <Sidebar isCollapsed={false} setIsCollapsed={() => {}} onMobileClose={() => setIsMobileOpen(false)} />
             </motion.div>
           </>
         )}
@@ -102,7 +102,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
       >
         <Header onToggleMobileSidebar={() => setIsMobileOpen(!isMobileOpen)} />
-        <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col">
+        <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-6 lg:p-8 flex flex-col min-w-0">
           {children}
         </main>
       </div>

@@ -13,6 +13,7 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { WorkSyncLogo } from "@/components/WorkSyncLogo";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
+  onMobileClose?: () => void;
 }
 
 interface SidebarLink {
@@ -38,7 +40,7 @@ const sidebarLinks: SidebarLink[] = [
   { name: "Analytics", href: "/analytics", icon: BarChart3, accentColor: "text-emerald-accent" },
 ];
 
-export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
+export default function Sidebar({ isCollapsed, setIsCollapsed, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -59,6 +61,16 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
           href="/dashboard"
           className={cn("min-w-0", isCollapsed && "justify-center w-full")}
         />
+        {onMobileClose && (
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="md:hidden flex h-8 w-8 items-center justify-center rounded-lg border border-card-border text-muted hover:text-foreground"
+            aria-label="Close menu"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Navigation Links */}

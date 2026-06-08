@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Users, Mail, UserPlus, Shield, MessageSquare, Search, Award } from "lucide-react";
 import { motion } from "framer-motion";
 import { SubmitButton } from "@/components/SubmitButton";
+import { FormField, formInputClass } from "@/components/FormField";
 import { CyberDropdown } from "@/components/CyberDropdown";
 import { cn } from "@/lib/utils";
 import { apiFetch, parseJson } from "@/lib/api";
@@ -165,9 +166,9 @@ export default function TeamPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Users className="h-6 w-6 text-cyan-accent" />
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Users className="h-5 w-5 sm:h-6 sm:w-6 text-cyan-accent shrink-0" />
             <span>Team Directory</span>
           </h1>
           <p className="text-xs text-muted mt-1">Review permissions, task loads, and efficiency values of engineers.</p>
@@ -189,8 +190,7 @@ export default function TeamPage() {
             onSubmit={handleInvite}
             className={cn("space-y-4 relative", isInviting && "opacity-80")}
           >
-            <div className="space-y-1.5">
-              <label className="text-[10px] uppercase tracking-wider text-muted font-bold">Email Address</label>
+            <FormField label="Email Address">
               <input
                 type="email"
                 required
@@ -198,12 +198,11 @@ export default function TeamPage() {
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="developer@worksync.io"
                 disabled={isInviting}
-                className="w-full h-10 px-3 bg-slate-950/40 rounded-lg border border-card-border/60 text-xs focus:outline-none focus:border-cyan-accent transition-all placeholder:text-muted disabled:opacity-60"
+                className={formInputClass("cyan")}
               />
-            </div>
+            </FormField>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] uppercase tracking-wider text-muted font-bold">Role Access</label>
+            <FormField label="Role Access">
               <CyberDropdown
                 variant="form"
                 value={inviteRole}
@@ -211,14 +210,14 @@ export default function TeamPage() {
                 onChange={(v) =>
                   setInviteRole(v as "Admin" | "Manager" | "Member")
                 }
-                className="w-full [&_button]:h-10 [&_button]:rounded-lg [&_button]:border-card-border/60 [&_button]:bg-slate-950/60 [&_button]:text-xs"
+                className="w-full [&_button]:h-10 [&_button]:w-full [&_button]:rounded-xl [&_button]:border-slate-800 [&_button]:bg-slate-950 [&_button]:text-sm"
                 options={[
                   { value: "Member", label: "Member (Limited)" },
                   { value: "Manager", label: "Manager (Moderator)" },
                   { value: "Admin", label: "Admin (Full Access)" },
                 ]}
               />
-            </div>
+            </FormField>
 
             <SubmitButton
               isLoading={isInviting}
